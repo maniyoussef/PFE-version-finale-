@@ -1,0 +1,373 @@
+// Variables
+:host {
+  --primary-color: #ff9800; // Light orange
+  --dark-color: #f57c00;    // Dark orange
+  --light-color: #ffe0b2;   // Light orange background
+  --primary-black: #333333;
+  --primary-gray: #f5f5f5;
+  --card-radius: 15px;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.06), 0 5px 15px rgba(0, 0, 0, 0.03);
+  --animation-duration: 0.6s;
+  --topbar-height: 30px;
+  --navbar-height: 60px;
+  display: block;
+  min-height: 100vh;
+}
+
+// Advanced Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 152, 0, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+  }
+}
+
+// Main container
+.profile-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #fff8e1 100%);
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding-top: calc(var(--topbar-height) + var(--navbar-height)); /* Space for fixed positioned topbar and navbar */
+
+  app-top-bar,
+  app-user-navbar {
+    width: 100%;
+    background-color: white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    position: fixed;
+    left: 0;
+    z-index: 1000;
+    margin: 0;
+    padding: 0;
+  }
+
+  app-top-bar {
+    top: 0;
+    height: var(--topbar-height);
+    max-height: var(--topbar-height);
+    min-height: var(--topbar-height);
+  }
+
+  app-user-navbar {
+    top: var(--topbar-height); /* Position exactly below topbar */
+    height: var(--navbar-height);
+    max-height: var(--navbar-height);
+    min-height: var(--navbar-height);
+    background-color: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    z-index: 990; /* Lower than topbar */
+  }
+}
+
+// Animated background
+.animated-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0), rgba(255, 152, 0, 0.05), rgba(245, 124, 0, 0.03), rgba(255, 255, 255, 0));
+  background-size: 300% 300%;
+  animation: gradientFlow 30s ease infinite;
+  z-index: 0;
+}
+
+// Particle background
+.particle-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.particle-background::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 150%;
+  top: -25%;
+  left: 0;
+  background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ff9800' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+  animation: gradientFlow 120s linear infinite;
+}
+
+// Profile content
+.profile-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  animation: fadeIn var(--animation-duration) ease-out forwards;
+  padding: 30px; /* Removed excessive top padding since we're using padding-top on the container */
+}
+
+// Profile header
+.profile-header {
+  margin-bottom: 30px;
+  text-align: center;
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--primary-black);
+    position: relative;
+    display: inline-block;
+    
+    &::after {
+      content: "";
+      position: absolute;
+      width: 80px;
+      height: 4px;
+      background: linear-gradient(to right, var(--primary-color), var(--light-color));
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 2px;
+    }
+  }
+  
+  .subtitle {
+    color: #777;
+    font-size: 1.1rem;
+    margin-top: 20px;
+  }
+}
+
+// Profile cards container
+.profile-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+  margin-top: 40px;
+}
+
+// Profile card base styles
+.profile-card {
+  border-radius: var(--card-radius);
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--card-shadow);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05);
+  }
+  
+  .card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+    color: white;
+    padding: 20px 25px;
+    display: flex;
+    align-items: center;
+    
+    .header-icon {
+      margin-right: 10px;
+      font-size: 28px;
+      height: 28px;
+      width: 28px;
+    }
+    
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 500;
+    }
+  }
+}
+
+// User info card specific styles
+.user-info-content {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  
+  .user-avatar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    
+    .avatar-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
+      border: 5px solid rgba(255, 152, 0, 0.2);
+      
+      mat-icon {
+        font-size: 70px;
+        height: 70px;
+        width: 70px;
+        color: var(--primary-color);
+      }
+    }
+    
+    .user-role {
+      background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+  }
+  
+  .user-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    
+    .info-item {
+      .label {
+        font-size: 0.9rem;
+        color: #777;
+        margin-bottom: 5px;
+      }
+      
+      .value {
+        font-size: 1.1rem;
+        color: var(--primary-black);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Password management section
+.password-content {
+  padding: 30px;
+  
+  .password-info {
+    text-align: center;
+    
+    .password-placeholder {
+      margin-bottom: 30px;
+      
+      mat-icon {
+        font-size: 48px;
+        height: 48px;
+        width: 48px;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+      }
+      
+      p {
+        color: #666;
+        font-size: 1rem;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+    }
+    
+    .change-password-btn {
+      background-color: var(--primary-color);
+      color: white;
+      
+      &:hover {
+        background-color: var(--dark-color);
+      }
+    }
+  }
+  
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 500px;
+    margin: 0 auto;
+    
+    mat-form-field {
+      width: 100%;
+    }
+    
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+      
+      button[color="primary"] {
+        background-color: var(--primary-color);
+      }
+    }
+  }
+}
+
+// Loading state
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 20px;
+  color: #777;
+  
+  mat-icon {
+    font-size: 48px;
+    height: 48px;
+    width: 48px;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    animation: pulse 1.5s infinite;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .profile-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-header h1 {
+    font-size: 2rem;
+  }
+} 

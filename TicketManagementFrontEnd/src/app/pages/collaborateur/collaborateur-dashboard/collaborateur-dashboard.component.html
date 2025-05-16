@@ -1,0 +1,40 @@
+<div class="collaborateur-dashboard-container">
+  <div class="particle-background"></div>
+  <main class="collaborateur-main-content">
+    <div class="dashboard-container">
+      <h1 class="dashboard-title">Tableau de bord Collaborateur</h1>
+      <div class="dashboard-grid">
+        <div
+          class="dashboard-card"
+          *ngFor="let card of dashboardCards; let i = index"
+          [attr.data-index]="i"
+        >
+          <div class="card-badge">{{ i + 1 }}</div>
+          <div class="card-light"></div>
+          <div class="card-content">
+            <div class="card-header card-header-centered">
+              <div class="icon-container">
+                <span class="material-icons">{{ card.icon }}</span>
+              </div>
+            </div>
+            <h2 class="card-title">{{ card.title }}</h2>
+            <div class="card-count">{{ card.count }}</div>
+            <div class="card-action">
+              <button
+                class="action-button full-width"
+                [routerLink]="card.route"
+                [color]="card.color"
+                mat-raised-button
+              >
+                <span class="button-text">{{ card.buttonText }}</span>
+                <span class="button-icon">
+                  <mat-icon>arrow_forward</mat-icon>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

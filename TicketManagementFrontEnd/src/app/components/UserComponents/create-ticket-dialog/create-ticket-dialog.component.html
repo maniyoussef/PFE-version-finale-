@@ -1,0 +1,188 @@
+<h2 mat-dialog-title>Créer un nouveau ticket</h2>
+
+<div *ngIf="isLoadingAssignments" class="loading-container">
+  <mat-progress-bar mode="indeterminate" color="accent"></mat-progress-bar>
+  <p class="loading-text">Chargement des projets et catégories disponibles...</p>
+</div>
+
+<!-- Enhanced error message display with refresh button -->
+<div *ngIf="errorMessage" class="error-message-container">
+  <div class="error-content">
+    <div class="error-icon-text">
+      <mat-icon>warning</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+    <button 
+      mat-raised-button 
+      (click)="refreshData()" 
+      [disabled]="isLoadingAssignments"
+    >
+      <mat-icon>refresh</mat-icon>
+      Actualiser
+    </button>
+  </div>
+</div>
+
+<!-- Enhanced fallback actions with better styling -->
+<div *ngIf="errorMessage && (availableProjects.length === 0 || availableCategories.length === 0)" class="fallback-actions">
+  <button mat-raised-button (click)="tryHardcodedClientIds()">
+    <mat-icon>account_circle</mat-icon>
+    Essayer avec d'autres utilisateurs
+  </button>
+  <p class="help-text">Cliquez pour essayer de charger les données à partir d'autres comptes client</p>
+</div>
+
+<form [formGroup]="ticketForm" (ngSubmit)="onSubmit()" *ngIf="!isLoadingAssignments" class="ticket-form">
+  <mat-dialog-content>
+    <!-- Title field -->
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Titre</mat-label>
+      <input matInput formControlName="title" required placeholder="Entrez un titre descriptif" />
+      <mat-icon matSuffix>title</mat-icon>
+      <mat-error *ngIf="ticketForm.get('title')?.hasError('required')">
+        Le titre est requis
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Description field -->
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Description</mat-label>
+      <textarea
+        matInput
+        formControlName="description"
+        required
+        rows="4"
+        placeholder="Décrivez votre problème en détail"
+      ></textarea>
+      <mat-icon matSuffix>description</mat-icon>
+      <mat-error *ngIf="ticketForm.get('description')?.hasError('required')">
+        La description est requise
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Qualification field -->
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Qualification</mat-label>
+      <select matNativeControl formControlName="qualification" required>
+        <option value="" disabled>Sélectionnez une qualification</option>
+        <option *ngFor="let qualification of qualifications" [value]="qualification">
+          {{ qualification }}
+        </option>
+      </select>
+      <mat-icon matSuffix>class</mat-icon>
+      <mat-error *ngIf="ticketForm.get('qualification')?.hasError('required')">
+        La qualification est requise
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Project Select with enhanced styling -->
+    <div class="form-group">
+      <label for="projectSelect">
+        <mat-icon class="form-group-icon">business</mat-icon>
+        Projet*
+      </label>
+      <select id="projectSelect" class="custom-select" formControlName="projectId" required>
+        <option value="" disabled selected>Sélectionnez un projet</option>
+        <option *ngFor="let project of availableProjects" [value]="project.id">
+          {{ project.name }}
+        </option>
+      </select>
+      <div *ngIf="ticketForm.get('projectId')?.invalid && ticketForm.get('projectId')?.touched" class="error-text">
+        Le projet est requis
+      </div>
+      <div *ngIf="availableProjects.length > 0" class="hint-text">
+        {{ availableProjects.length }} projets disponibles
+      </div>
+    </div>
+
+    <!-- Category Select with enhanced styling -->
+    <div class="form-group">
+      <label for="categorySelect">
+        <mat-icon class="form-group-icon">category</mat-icon>
+        Catégorie*
+      </label>
+      <select id="categorySelect" class="custom-select" formControlName="categoryId" required>
+        <option value="" disabled selected>Sélectionnez une catégorie</option>
+        <option *ngFor="let category of availableCategories" [value]="category.id">
+          {{ category.name }}
+        </option>
+      </select>
+      <div *ngIf="ticketForm.get('categoryId')?.invalid && ticketForm.get('categoryId')?.touched" class="error-text">
+        La catégorie est requise
+      </div>
+      <div *ngIf="availableCategories.length > 0" class="hint-text">
+        {{ availableCategories.length }} catégories disponibles
+      </div>
+    </div>
+
+    <!-- Priority field -->
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Priorité</mat-label>
+      <select matNativeControl formControlName="priority" required>
+        <option value="" disabled>Sélectionnez une priorité</option>
+        <option *ngFor="let priority of priorities" [value]="priority">
+          {{ priority }}
+        </option>
+      </select>
+      <mat-icon matSuffix>priority_high</mat-icon>
+      <mat-error *ngIf="ticketForm.get('priority')?.hasError('required')">
+        La priorité est requise
+      </mat-error>
+    </mat-form-field>
+
+    <!-- File upload with enhanced styling -->
+    <div class="file-upload">
+      <button type="button" mat-raised-button (click)="fileInput.click()" class="upload-button">
+        <mat-icon>attach_file</mat-icon>
+        Télécharger une pièce jointe
+      </button>
+      <input
+        #fileInput
+        type="file"
+        (change)="onFileSelected($event)"
+        style="display: none"
+      />
+      <div *ngIf="selectedFileName" class="file-info">
+        <span class="file-name">{{ selectedFileName }}</span>
+        <button *ngIf="selectedFileName" class="remove-file" mat-icon-button (click)="removeFile()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <mat-progress-bar
+        *ngIf="isUploading"
+        mode="determinate"
+        [value]="uploadProgress"
+        color="accent"
+        class="upload-progress"
+      ></mat-progress-bar>
+    </div>
+
+    <!-- Comment field -->
+    <mat-form-field appearance="outline" class="form-field">
+      <mat-label>Commentaire</mat-label>
+      <textarea 
+        matInput 
+        formControlName="commentaire" 
+        rows="3"
+        placeholder="Informations supplémentaires (optionnel)"
+      ></textarea>
+      <mat-icon matSuffix>comment</mat-icon>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <!-- Dialog actions -->
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+      Annuler
+    </button>
+    <button
+      mat-raised-button
+      type="submit"
+      [disabled]="!ticketForm.valid || isUploading"
+    >
+      <mat-icon>save</mat-icon>
+      Créer le ticket
+    </button>
+  </mat-dialog-actions>
+</form>

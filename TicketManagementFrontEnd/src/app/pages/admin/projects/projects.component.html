@@ -1,0 +1,171 @@
+<div class="projects-container">
+  <div class="particle-background"></div>
+
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Gestion des Projets</h1>
+      <div class="header-actions">
+        <div class="search-container">
+          <div class="search-field-wrapper">
+            <mat-icon>search</mat-icon>
+            <input 
+              type="text" 
+              class="search-field"
+              [(ngModel)]="searchTerm" 
+              placeholder="Rechercher un projet..." 
+            />
+          </div>
+        </div>
+        
+        <button class="add-button" (click)="toggleAddForm()">
+          <span class="button-icon">
+            <mat-icon>add</mat-icon>
+          </span>
+          <span class="button-text">Nouveau Projet</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No projects state -->
+    <div *ngIf="!isLoading && getFilteredProjects().length === 0" class="empty-state">
+      <mat-icon>folder_off</mat-icon>
+      <p *ngIf="!searchTerm">Aucun projet trouvé</p>
+      <p *ngIf="searchTerm">Aucun projet ne correspond à votre recherche</p>
+      <button class="action-button" (click)="toggleAddForm()">Ajouter un Projet</button>
+    </div>
+
+    <!-- Projects Table -->
+    <div *ngIf="!isLoading && getFilteredProjects().length > 0" class="card-container">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>
+                <span (click)="setSortCriteria('name')" class="sortable-header">
+                  Nom du Projet
+                  <mat-icon *ngIf="sortColumn === 'name'" class="sort-icon">
+                    {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                  </mat-icon>
+                </span>
+              </th>
+              <th>
+                <span (click)="setSortCriteria('description')" class="sortable-header">
+                  Description
+                  <mat-icon *ngIf="sortColumn === 'description'" class="sort-icon">
+                    {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                  </mat-icon>
+                </span>
+              </th>
+              <th>
+                <span (click)="setSortCriteria('status')" class="sortable-header">
+                  Statut
+                  <mat-icon *ngIf="sortColumn === 'status'" class="sort-icon">
+                    {{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
+                  </mat-icon>
+                </span>
+              </th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr 
+              *ngFor="let project of getFilteredProjects()" 
+              [class.row-highlighted]="activeRow === project.id"
+              (mouseenter)="setActiveRow(project.id)"
+              (mouseleave)="setActiveRow(null)">
+              <td>{{ project.name }}</td>
+              <td>{{ project.description || 'Aucune description' }}</td>
+              <td>
+                <div class="badge status-badge" [ngClass]="getStatusClass(project.status)">
+                  {{ project.status || 'Non défini' }}
+                </div>
+              </td>
+              <td class="action-cell">
+                <button
+                  class="action-button edit-button"
+                  mat-icon-button
+                  (click)="editProject(project)"
+                  matTooltip="Modifier ce projet"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  class="action-button delete-button"
+                  mat-icon-button
+                  (click)="confirmDeleteProject(project)"
+                  matTooltip="Supprimer ce projet"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Add/Edit Project Form -->
+    <div class="form-card" *ngIf="showAddForm" [@fadeIn]>
+      <div class="form-header">
+        <h2 class="form-title">{{ isEditMode ? 'Modifier le projet' : 'Ajouter un nouveau projet' }}</h2>
+        <button class="close-button" mat-icon-button (click)="toggleAddForm()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      
+      <div class="form-content">
+        <div class="form-field">
+          <label for="projectName">Nom du Projet *</label>
+          <input 
+            id="projectName"
+            type="text" 
+            [(ngModel)]="newProject.name" 
+            placeholder="Entrez le nom du projet" 
+            required
+          />
+        </div>
+        
+        <div class="form-field">
+          <label for="projectDescription">Description</label>
+          <textarea 
+            id="projectDescription"
+            [(ngModel)]="newProject.description" 
+            placeholder="Entrez la description du projet" 
+            rows="3"
+          ></textarea>
+        </div>
+        
+        <div class="form-field" *ngIf="isEditMode">
+          <label for="projectStatus">Statut</label>
+          <select id="projectStatus" [(ngModel)]="newProject.status">
+            <option value="En attente">En attente</option>
+            <option value="En cours">En cours</option>
+            <option value="Terminé">Terminé</option>
+            <option value="Suspendu">Suspendu</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button 
+          class="cancel-button" 
+          (click)="toggleAddForm()">
+          Annuler
+        </button>
+        <button 
+          class="submit-button" 
+          (click)="saveProject()" 
+          [disabled]="!newProject.name?.trim()">
+          {{ isEditMode ? 'Mettre à jour' : 'Ajouter' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

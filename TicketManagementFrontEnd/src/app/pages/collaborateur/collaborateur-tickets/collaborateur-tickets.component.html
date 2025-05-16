@@ -1,0 +1,136 @@
+<div class="collaborateur-tickets-container">
+  <div class="particle-background"></div>
+  <main class="collaborateur-main-content">
+    <div class="tickets-container">
+      <div class="header-row">
+        <h1 class="page-title">Mes tickets assignés</h1>
+        <div class="action-buttons">
+          <button mat-raised-button color="primary" (click)="openExportDialog()" [disabled]="isLoading || tickets.length === 0" matTooltip="Exporter en Excel">
+            <mat-icon>file_download</mat-icon> Exporter
+          </button>
+          <button mat-raised-button color="accent" (click)="refreshTickets()">
+            <mat-icon>refresh</mat-icon> Actualiser
+          </button>
+        </div>
+      </div>
+
+      <!-- Search and sorting controls -->
+      <div class="filter-controls" *ngIf="!isLoading && tickets.length > 0">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Rechercher un ticket..." (input)="filterTickets($event)">
+        </div>
+        
+        <div class="sort-container">
+          <label for="sort-select">Trier par :</label>
+          <select id="sort-select" (change)="applySort($event)">
+            <option value="newest">Plus récents en premier</option>
+            <option value="oldest">Plus anciens en premier</option>
+            <option value="status">Statut</option>
+            <option value="title">Titre</option>
+            <option value="priority">Priorité</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Statistics dashboard with new design -->
+      <div class="stats-wrapper" *ngIf="!isLoading && tickets.length > 0">
+        <div class="stat-card tickets">
+          <div class="stat-title">
+            <mat-icon>assignment</mat-icon>
+            Total tickets
+          </div>
+          <div class="stat-value">{{totalTickets}}</div>
+        </div>
+        <div class="stat-card in-progress">
+          <div class="stat-title">
+            <mat-icon>assignment_turned_in</mat-icon>
+            Assignés
+          </div>
+          <div class="stat-value">{{assignedTickets}}</div>
+        </div>
+        <div class="stat-card resolved">
+          <div class="stat-title">
+            <mat-icon>check_circle</mat-icon>
+            Résolus
+          </div>
+          <div class="stat-value">{{resolvedTickets}}</div>
+        </div>
+        <div class="stat-card duration">
+          <div class="stat-title">
+            <mat-icon>schedule</mat-icon>
+            Durée moyenne
+          </div>
+          <div class="stat-value">{{averageDuration}}</div>
+        </div>
+      </div>
+
+      <!-- Loading spinner -->
+      <div *ngIf="isLoading" class="spinner-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Chargement des tickets...</p>
+      </div>
+
+      <div *ngIf="!isLoading && tickets.length === 0" class="no-tickets">
+        <mat-icon>assignment_late</mat-icon>
+        <p>Aucun ticket assigné pour le moment</p>
+        <p class="subtext">Les tickets qui vous seront assignés apparaîtront ici.</p>
+      </div>
+
+      <div *ngIf="!isLoading && tickets.length > 0" class="tickets-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Projet</th>
+              <th>Catégorie</th>
+              <th>Priorité</th>
+              <th>Status</th>
+              <th>Date de création</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ticket of filteredTickets" [class.active-row]="activeTimer?.ticketId === ticket.id">
+              <td class="ticket-title">
+                <div class="title-content">
+                  <strong>{{ ticket.title }}</strong>
+                  <small class="ticket-id">#{{ ticket.id }}</small>
+                </div>
+              </td>
+              <td>
+                <div class="project-cell">
+                  <span class="project-tag">{{ ticket.project?.name || "Non spécifié" }}</span>
+                </div>
+              </td>
+              <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+              <td>
+                <span class="priority-badge" [ngClass]="'priority-' + (ticket.priority ? ticket.priority.toLowerCase().replace(' ', '-') : 'unknown')">
+                  {{ ticket.priority || 'Non défini' }}
+                </span>
+              </td>
+              <td>
+                <span [class]="getStatusClass(ticket.status ?? 'Unknown')">
+                  <mat-icon>{{getStatusIcon(ticket.status ?? "Unknown")}}</mat-icon>
+                  {{ ticket.status ?? "Unknown" }}
+                </span>
+              </td>
+              <td>{{ formatCreatedDate(ticket) }}</td>
+              <td class="actions-cell">
+                <button mat-icon-button color="primary" (click)="openDetailsDialog(ticket)" matTooltip="Voir les détails du ticket">
+                  <mat-icon>info</mat-icon>
+                </button>
+                <button mat-icon-button color="accent" (click)="openActionsDialog(ticket)" matTooltip="Actions sur le ticket">
+                  <mat-icon>build</mat-icon>
+                </button>
+                <button mat-icon-button (click)="openCommentDialog(ticket)" matTooltip="Ajouter un commentaire">
+                  <mat-icon>comment</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>

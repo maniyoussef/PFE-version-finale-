@@ -1,0 +1,624 @@
+<div class="assignment-container">
+  <h1 class="page-title">Gestion des Assignations</h1>
+
+  <!-- Loading overlay for initial data -->
+  <div class="loading-overlay" *ngIf="isLoadingData">
+    <mat-spinner diameter="50"></mat-spinner>
+    <span>Chargement des données...</span>
+  </div>
+
+  <!-- Main content with tabs -->
+  <mat-card class="main-card">
+    <mat-card-content>
+      <!-- Refresh button -->
+      <div class="action-bar">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="refreshAllData()"
+          [disabled]="isLoadingData"
+        >
+          <mat-icon>refresh</mat-icon> Rafraîchir
+        </button>
+      </div>
+
+      <mat-tab-group dynamicHeight animationDuration="300ms">
+        <!-- Tab 1: Chef de Projet Assignment -->
+        <mat-tab label="Affectation de Projets aux Chefs de Projet">
+          <div class="tab-content">
+            <div class="section">
+              <h2 class="section-title">Sélectionner un Chef de Projet</h2>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Chef de Projet</mat-label>
+                <mat-select
+                  [(ngModel)]="selectedChef"
+                  (selectionChange)="onChefSelected()"
+                >
+                  <mat-option [value]="null"
+                    >-- Sélectionner un Chef de Projet --</mat-option
+                  >
+                  <mat-option *ngFor="let chef of chefs" [value]="chef">
+                    {{ chef.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Chef's Projects -->
+            <div class="section" *ngIf="selectedChef">
+              <h2 class="section-title">
+                Projets Assignés à {{ selectedChef.name }}
+              </h2>
+
+              <div
+                class="table-container"
+                *ngIf="!isLoadingChefProjects; else loadingChefProjects"
+              >
+                <table
+                  mat-table
+                  [dataSource]="chefProjects"
+                  matSort
+                  #chefProjectsSort="matSort"
+                  class="full-width mat-elevation-z2"
+                >
+                  <!-- ID Column -->
+                  <ng-container matColumnDef="id">
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                      ID
+                    </th>
+                    <td mat-cell *matCellDef="let project">{{ project.id }}</td>
+                  </ng-container>
+
+                  <!-- Name Column -->
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                      Nom
+                    </th>
+                    <td mat-cell *matCellDef="let project">
+                      {{ project.name }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Description Column -->
+                  <ng-container matColumnDef="description">
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                      Description
+                    </th>
+                    <td mat-cell *matCellDef="let project">
+                      {{ project.description }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Actions Column -->
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>Actions</th>
+                    <td mat-cell *matCellDef="let project">
+                      <button
+                        mat-icon-button
+                        color="warn"
+                        (click)="removeProjectFromChef(project)"
+                        matTooltip="Retirer le projet"
+                      >
+                        <mat-icon>remove_circle</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="chefProjectColumns"></tr>
+                  <tr
+                    mat-row
+                    *matRowDef="let row; columns: chefProjectColumns"
+                  ></tr>
+                </table>
+
+                <mat-paginator
+                  #chefProjectsPaginator
+                  [pageSize]="5"
+                  [pageSizeOptions]="[5, 10, 25]"
+                  showFirstLastButtons
+                >
+                </mat-paginator>
+
+                <div class="empty-state" *ngIf="chefProjects.length === 0">
+                  <p>Aucun projet assigné à ce chef de projet</p>
+                </div>
+              </div>
+
+              <ng-template #loadingChefProjects>
+                <div class="loading-container">
+                  <mat-spinner diameter="40"></mat-spinner>
+                  <span>Chargement des projets...</span>
+                </div>
+              </ng-template>
+
+              <!-- Assign New Project to Chef -->
+              <div class="section">
+                <h3 class="subsection-title">Assigner un Nouveau Projet</h3>
+                <div class="assignment-form">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Projet</mat-label>
+                    <mat-select
+                      [(ngModel)]="selectedProjectForChef"
+                      [disabled]="isAssigningProjectToChef"
+                    >
+                      <mat-option [value]="null"
+                        >-- Sélectionner un Projet --</mat-option
+                      >
+                      <mat-option
+                        *ngFor="let project of availableProjects"
+                        [value]="project"
+                      >
+                        {{ project.name }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    [disabled]="
+                      !selectedProjectForChef || isAssigningProjectToChef
+                    "
+                    (click)="assignProjectToChef()"
+                  >
+                    <mat-icon>add</mat-icon>
+                    <span *ngIf="!isAssigningProjectToChef">Assigner</span>
+                    <span *ngIf="isAssigningProjectToChef">En cours...</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Tab 2: Client Assignment -->
+        <mat-tab label="Affectation aux Clients">
+          <div class="tab-content">
+            <div class="section">
+              <h2 class="section-title">Sélectionner un Client</h2>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Client</mat-label>
+                <mat-select
+                  [(ngModel)]="selectedClient"
+                  (selectionChange)="onClientSelected()"
+                >
+                  <mat-option [value]="null"
+                    >-- Sélectionner un Client --</mat-option
+                  >
+                  <mat-option *ngFor="let client of clients" [value]="client">
+                    {{ client.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Client's Data -->
+            <div class="section" *ngIf="selectedClient">
+              <div
+                class="loading-container"
+                *ngIf="isLoadingClientData; else clientContent"
+              >
+                <mat-spinner diameter="40"></mat-spinner>
+                <span>Chargement des données client...</span>
+              </div>
+
+              <ng-template #clientContent>
+                <mat-accordion>
+                  <!-- Client's Projects Panel -->
+                  <mat-expansion-panel expanded>
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>
+                        Projets Assignés à {{ selectedClient.name }}
+                      </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <div class="table-container">
+                      <table
+                        mat-table
+                        [dataSource]="clientProjects"
+                        matSort
+                        #clientProjectsSort="matSort"
+                        class="full-width mat-elevation-z2"
+                      >
+                        <!-- ID Column -->
+                        <ng-container matColumnDef="id">
+                          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            ID
+                          </th>
+                          <td mat-cell *matCellDef="let project">
+                            {{ project.id }}
+                          </td>
+                        </ng-container>
+
+                        <!-- Name Column -->
+                        <ng-container matColumnDef="name">
+                          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            Nom
+                          </th>
+                          <td mat-cell *matCellDef="let project">
+                            {{ project.name }}
+                          </td>
+                        </ng-container>
+
+                        <!-- Description Column -->
+                        <ng-container matColumnDef="description">
+                          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            Description
+                          </th>
+                          <td mat-cell *matCellDef="let project">
+                            {{ project.description }}
+                          </td>
+                        </ng-container>
+
+                        <!-- Actions Column -->
+                        <ng-container matColumnDef="actions">
+                          <th mat-header-cell *matHeaderCellDef>Actions</th>
+                          <td mat-cell *matCellDef="let project">
+                            <button
+                              mat-icon-button
+                              color="warn"
+                              (click)="removeProjectFromClient(project)"
+                              matTooltip="Retirer le projet"
+                            >
+                              <mat-icon>remove_circle</mat-icon>
+                            </button>
+                          </td>
+                        </ng-container>
+
+                        <tr
+                          mat-header-row
+                          *matHeaderRowDef="clientProjectColumns"
+                        ></tr>
+                        <tr
+                          mat-row
+                          *matRowDef="let row; columns: clientProjectColumns"
+                        ></tr>
+                      </table>
+
+                      <mat-paginator
+                        #clientProjectsPaginator
+                        [pageSize]="5"
+                        [pageSizeOptions]="[5, 10, 25]"
+                        showFirstLastButtons
+                      >
+                      </mat-paginator>
+
+                      <div
+                        class="empty-state"
+                        *ngIf="clientProjects.length === 0"
+                      >
+                        <p>Aucun projet assigné à ce client</p>
+                      </div>
+                    </div>
+
+                    <!-- Assign New Project to Client -->
+                    <div class="assignment-form">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Projet</mat-label>
+                        <mat-select
+                          [(ngModel)]="selectedProjectForClient"
+                          [disabled]="isAssigningToClient"
+                        >
+                          <mat-option [value]="null"
+                            >-- Sélectionner un Projet --</mat-option
+                          >
+                          <mat-option
+                            *ngFor="let project of availableProjectsForClient"
+                            [value]="project"
+                          >
+                            {{ project.name }}
+                          </mat-option>
+                        </mat-select>
+                      </mat-form-field>
+
+                      <button
+                        mat-raised-button
+                        color="primary"
+                        [disabled]="
+                          !selectedProjectForClient || isAssigningToClient
+                        "
+                        (click)="assignProjectToClient()"
+                      >
+                        <mat-icon>add</mat-icon>
+                        <span *ngIf="!isAssigningToClient"
+                          >Assigner Projet</span
+                        >
+                        <span *ngIf="isAssigningToClient">En cours...</span>
+                      </button>
+                    </div>
+                  </mat-expansion-panel>
+
+                  <!-- Client's Categories Panel -->
+                  <mat-expansion-panel expanded>
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>
+                        Catégories de Problèmes Assignées à
+                        {{ selectedClient.name }}
+                      </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <div class="table-container">
+                      <table
+                        mat-table
+                        [dataSource]="clientCategories"
+                        matSort
+                        #clientCategoriesSort="matSort"
+                        class="full-width mat-elevation-z2"
+                      >
+                        <!-- ID Column -->
+                        <ng-container matColumnDef="id">
+                          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            ID
+                          </th>
+                          <td mat-cell *matCellDef="let category">
+                            {{ category.id }}
+                          </td>
+                        </ng-container>
+
+                        <!-- Name Column -->
+                        <ng-container matColumnDef="name">
+                          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            Nom
+                          </th>
+                          <td mat-cell *matCellDef="let category">
+                            {{ category.name }}
+                          </td>
+                        </ng-container>
+
+                        <!-- Description Column -->
+                        <ng-container matColumnDef="description">
+                          <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            Description
+                          </th>
+                          <td mat-cell *matCellDef="let category">
+                            {{ category.description }}
+                          </td>
+                        </ng-container>
+
+                        <!-- Actions Column -->
+                        <ng-container matColumnDef="actions">
+                          <th mat-header-cell *matHeaderCellDef>Actions</th>
+                          <td mat-cell *matCellDef="let category">
+                            <button
+                              mat-icon-button
+                              color="warn"
+                              (click)="removeCategoryFromClient(category)"
+                              matTooltip="Retirer la catégorie"
+                            >
+                              <mat-icon>remove_circle</mat-icon>
+                            </button>
+                          </td>
+                        </ng-container>
+
+                        <tr
+                          mat-header-row
+                          *matHeaderRowDef="clientCategoryColumns"
+                        ></tr>
+                        <tr
+                          mat-row
+                          *matRowDef="let row; columns: clientCategoryColumns"
+                        ></tr>
+                      </table>
+
+                      <mat-paginator
+                        #clientCategoriesPaginator
+                        [pageSize]="5"
+                        [pageSizeOptions]="[5, 10, 25]"
+                        showFirstLastButtons
+                      >
+                      </mat-paginator>
+
+                      <div
+                        class="empty-state"
+                        *ngIf="clientCategories.length === 0"
+                      >
+                        <p>Aucune catégorie de problème assignée à ce client</p>
+                      </div>
+                    </div>
+
+                    <!-- Assign New Category to Client -->
+                    <div class="assignment-form">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Catégorie de Problème</mat-label>
+                        <mat-select
+                          [(ngModel)]="selectedCategoryForClient"
+                          [disabled]="isAssigningToClient"
+                        >
+                          <mat-option [value]="null"
+                            >-- Sélectionner une Catégorie --</mat-option
+                          >
+                          <mat-option
+                            *ngFor="let category of availableCategories"
+                            [value]="category"
+                          >
+                            {{ category.name }}
+                          </mat-option>
+                        </mat-select>
+                      </mat-form-field>
+
+                      <button
+                        mat-raised-button
+                        color="primary"
+                        [disabled]="
+                          !selectedCategoryForClient || isAssigningToClient
+                        "
+                        (click)="assignCategoryToClient()"
+                      >
+                        <mat-icon>add</mat-icon>
+                        <span *ngIf="!isAssigningToClient"
+                          >Assigner Catégorie</span
+                        >
+                        <span *ngIf="isAssigningToClient">En cours...</span>
+                      </button>
+                    </div>
+                  </mat-expansion-panel>
+                </mat-accordion>
+              </ng-template>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Tab 3: Collaborator Assignment -->
+        <mat-tab label="Affectation des Collaborateurs">
+          <div class="tab-content">
+            <div class="section">
+              <h2 class="section-title">Sélectionner un Chef de Projet</h2>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Chef de Projet</mat-label>
+                <mat-select
+                  [(ngModel)]="selectedChef"
+                  (selectionChange)="onChefForCollaboratorSelected()"
+                >
+                  <mat-option [value]="null"
+                    >-- Sélectionner un Chef de Projet --</mat-option
+                  >
+                  <mat-option *ngFor="let chef of chefs" [value]="chef">
+                    {{ chef.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <mat-divider></mat-divider>
+
+            <!-- Chef's Collaborators -->
+            <div class="section" *ngIf="selectedChef">
+              <h2 class="section-title">
+                Collaborateurs Assignés à {{ selectedChef.name }}
+              </h2>
+
+              <div
+                class="table-container"
+                *ngIf="!isLoadingCollaborators; else loadingCollaborators"
+              >
+                <table
+                  mat-table
+                  [dataSource]="chefCollaborators"
+                  matSort
+                  #collaboratorsSort="matSort"
+                  class="full-width mat-elevation-z2"
+                >
+                  <!-- ID Column -->
+                  <ng-container matColumnDef="id">
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                      ID
+                    </th>
+                    <td mat-cell *matCellDef="let collaborator">
+                      {{ collaborator.id }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Name Column -->
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                      Nom
+                    </th>
+                    <td mat-cell *matCellDef="let collaborator">
+                      {{ collaborator.name }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Email Column -->
+                  <ng-container matColumnDef="email">
+                    <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                      Email
+                    </th>
+                    <td mat-cell *matCellDef="let collaborator">
+                      {{ collaborator.email }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Actions Column -->
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>Actions</th>
+                    <td mat-cell *matCellDef="let collaborator">
+                      <button
+                        mat-icon-button
+                        color="warn"
+                        (click)="removeCollaboratorFromChef(collaborator)"
+                        matTooltip="Retirer le collaborateur"
+                      >
+                        <mat-icon>remove_circle</mat-icon>
+                      </button>
+                    </td>
+                  </ng-container>
+
+                  <tr
+                    mat-header-row
+                    *matHeaderRowDef="collaboratorColumns"
+                  ></tr>
+                  <tr
+                    mat-row
+                    *matRowDef="let row; columns: collaboratorColumns"
+                  ></tr>
+                </table>
+
+                <mat-paginator
+                  #collaboratorsPaginator
+                  [pageSize]="5"
+                  [pageSizeOptions]="[5, 10, 25]"
+                  showFirstLastButtons
+                >
+                </mat-paginator>
+
+                <div class="empty-state" *ngIf="chefCollaborators.length === 0">
+                  <p>Aucun collaborateur assigné à ce chef de projet</p>
+                </div>
+              </div>
+
+              <ng-template #loadingCollaborators>
+                <div class="loading-container">
+                  <mat-spinner diameter="40"></mat-spinner>
+                  <span>Chargement des collaborateurs...</span>
+                </div>
+              </ng-template>
+
+              <!-- Assign New Collaborator to Chef -->
+              <div class="section">
+                <h3 class="subsection-title">
+                  Assigner un Nouveau Collaborateur
+                </h3>
+                <div class="assignment-form">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Collaborateur</mat-label>
+                    <mat-select
+                      [(ngModel)]="selectedCollaborator"
+                      [disabled]="isAssigningCollaborator"
+                    >
+                      <mat-option [value]="null"
+                        >-- Sélectionner un Collaborateur --</mat-option
+                      >
+                      <mat-option
+                        *ngFor="let collaborator of availableCollaborators"
+                        [value]="collaborator"
+                      >
+                        {{ collaborator.name }}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    [disabled]="
+                      !selectedCollaborator || isAssigningCollaborator
+                    "
+                    (click)="assignCollaboratorToChef()"
+                  >
+                    <mat-icon>add</mat-icon>
+                    <span *ngIf="!isAssigningCollaborator">Assigner</span>
+                    <span *ngIf="isAssigningCollaborator">En cours...</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>

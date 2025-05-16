@@ -1,0 +1,135 @@
+<mat-dialog-content class="streamlined-content">
+  <!-- Clean, minimal header -->
+  <div class="minimal-header">
+    <div class="header-content">
+      <span class="notification-title">Notifications</span>
+      <span class="notification-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+    </div>
+
+    <div class="header-actions">
+      <button mat-icon-button (click)="refreshNotifications()" matTooltip="Rafraîchir" class="action-icon">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button mat-icon-button (click)="markAllAsRead()" *ngIf="hasUnread" matTooltip="Tout marquer lu" class="action-icon">
+        <mat-icon>done_all</mat-icon>
+      </button>
+      <button mat-icon-button (click)="clearNotifications()" matTooltip="Effacer tout" class="action-icon">
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
+      <button mat-icon-button (click)="clearSeenNotifications()" *ngIf="enableClearSeenButton && hasReadNotifications()" matTooltip="Effacer lues" class="action-icon">
+        <mat-icon>cleaning_services</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="notification-summary" *ngIf="unreadCount > 0">
+    <mat-icon>info</mat-icon>
+    <span *ngIf="unreadCount === 1">1 notification non lue</span>
+    <span *ngIf="unreadCount > 1">{{ unreadCount }} notifications non lues</span>
+  </div>
+
+  <!-- Single scrollable container -->
+  <div class="notifications-container" *ngIf="notifications.length > 0">
+    <!-- Important Notifications -->
+    <div class="notification-group" *ngIf="importantNotifications.length > 0">
+      <h3 class="group-title">
+        <mat-icon>priority_high</mat-icon> Important
+      </h3>
+      
+      <div class="notification-list">
+        <div *ngFor="let notification of importantNotifications; trackBy: trackByFn"
+            class="notification-item"
+            [class.unread]="!notification.isRead"
+            [class.resolved-notification]="isResolutionNotification(notification)"
+            [class.unresolved-notification]="isUnresolutionNotification(notification)"
+            [class.highlighted-notification]="isHighlightedResolutionNotification(notification)"
+            (click)="navigateToTicket(notification)">
+
+          <div class="notification-icon">
+            <mat-icon 
+              [color]="getIconColorForNotification(notification)"
+              [matTooltip]="getNotificationTypeLabel(notification.type)">
+              {{ notification.icon || getIconForNotificationType(notification.type) }}
+            </mat-icon>
+          </div>
+
+          <div class="notification-details">
+            <div class="notification-message" [innerHTML]="highlightResolutionTerms(notification.message)"></div>
+            <div class="notification-time">{{ getRelativeTime(notification.timestamp) }}</div>
+            <div class="notification-ticket-id" *ngIf="notification.relatedId">
+              Ticket #{{ notification.relatedId }}
+            </div>
+            <div class="notification-comment" *ngIf="notification.comment">
+              <small>{{ notification.comment }}</small>
+            </div>
+          </div>
+
+          <button mat-icon-button class="notification-action"
+            *ngIf="!notification.isRead"
+            matTooltip="Marquer comme lu"
+            (click)="$event.stopPropagation(); markAsRead(notification)">
+            <mat-icon>done</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other Notifications -->
+    <div class="notification-group">
+      <h3 class="group-title" *ngIf="importantNotifications.length > 0">
+        <mat-icon>notifications</mat-icon> Autres notifications
+      </h3>
+      
+      <div class="notification-list">
+        <div *ngFor="let notification of otherNotifications; trackBy: trackByFn"
+            class="notification-item"
+            [class.unread]="!notification.isRead"
+            [class.chef-projet-notification]="isChefProjetNotification(notification)"
+            (click)="navigateToTicket(notification)">
+
+          <div class="notification-icon">
+            <mat-icon 
+              [color]="getIconColorForNotification(notification)"
+              [matTooltip]="getNotificationTypeLabel(notification.type)">
+              {{ notification.icon || getIconForNotificationType(notification.type) }}
+            </mat-icon>
+          </div>
+
+          <div class="notification-details">
+            <div class="notification-message" [innerHTML]="notification.message"></div>
+            <div class="notification-time">{{ getRelativeTime(notification.timestamp) }}</div>
+            <div class="notification-ticket-id" *ngIf="notification.relatedId">
+              Ticket #{{ notification.relatedId }}
+            </div>
+          </div>
+
+          <button mat-icon-button class="notification-action"
+            *ngIf="!notification.isRead"
+            matTooltip="Marquer comme lu"
+            (click)="$event.stopPropagation(); markAsRead(notification)">
+            <mat-icon>done</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Compact legend -->
+    <div class="simple-legend">
+      <div class="legend-item"><div class="legend-color resolved"></div> Résolu</div>
+      <div class="legend-item"><div class="legend-color unresolved"></div> Non résolu</div>
+      <div class="legend-item"><div class="legend-color unread"></div> Non lu</div>
+      <div class="legend-item"><div class="legend-color chef-projet"></div> Chef projet</div>
+    </div>
+  </div>
+
+  <div class="empty-notifications" *ngIf="notifications.length === 0">
+    <mat-icon class="empty-icon" [class.spinning]="showLoading">
+      {{ showLoading ? 'sync' : 'notifications_off' }}
+    </mat-icon>
+    <p class="empty-text">{{ showLoading ? 'Chargement des notifications...' : 'Aucune notification' }}</p>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close class="close-button">Fermer</button>
+</mat-dialog-actions> 

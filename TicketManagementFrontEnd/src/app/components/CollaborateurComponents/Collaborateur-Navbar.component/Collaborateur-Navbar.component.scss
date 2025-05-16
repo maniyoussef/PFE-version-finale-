@@ -1,0 +1,445 @@
+/* Root variables for consistent design */
+:root {
+  --primary: #ff7043;
+  --primary-dark: #e64a19;
+  --primary-light: #ffccbc;
+  --secondary: #2c3e50;
+  --secondary-dark: #1a2530;
+  --secondary-light: #b0bec5;
+  --text-dark: #263238;
+  --text-medium: #546e7a;
+  --text-light: #90a4ae;
+  --background: #ffffff;
+  --surface: #f8f9fa;
+  --divider: #eceff1;
+  --success: #4caf50;
+  --warning: #ff9800;
+  --danger: #f44336;
+  --info: #2196f3;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow: 0 3px 6px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --topbar-height: 40px;
+  --navbar-height: 60px;
+}
+
+/* collaborateur-navbar.component.scss */
+.navbar {
+  height: 60px;
+  background-color: white;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  top: 40px; /* Fixed pixel value: exactly below 40px topbar */
+  left: 0;
+  z-index: 990; /* Lower than topbar z-index (1000) */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: var(--navbar-height);
+  background-color: white;
+  min-width: 200px;
+  border-right: 1px solid #e9ecef;
+  
+  img {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+    object-fit: contain;
+  }
+  
+  .brand-text {
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    
+    .primary {
+      color: #2c3e50;
+    }
+    
+    .accent {
+      color: #ff9800;
+    }
+  }
+}
+
+.navbar-links {
+  display: flex;
+  height: 100%;
+  padding-left: 20px;
+  
+  a {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    color: #495057;
+    font-size: 14px;
+    text-decoration: none;
+    position: relative;
+    white-space: nowrap;
+    
+    mat-icon {
+      margin-right: 8px;
+      font-size: 20px;
+      color: #495057;
+    }
+    
+    &:hover {
+      color: #ff7043;
+      
+      mat-icon {
+        color: #ff7043;
+      }
+    }
+    
+    &.active-link {
+      color: #ff7043;
+      font-weight: 500;
+      
+      mat-icon {
+        color: #ff7043;
+      }
+      
+      &:after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        width: 100%;
+        background-color: #ff7043;
+      }
+    }
+  }
+}
+
+.nav-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding-right: 20px;
+  
+  button {
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 15px;
+    
+    mat-icon {
+      font-size: 20px;
+      
+      &:hover {
+        color: #ff7043;
+      }
+    }
+    
+    &.logout-button {
+      mat-icon {
+        color: #dc3545;
+        
+        &:hover {
+          color: #c82333;
+        }
+      }
+    }
+  }
+}
+
+.profile-button {
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  margin-left: 15px;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  
+  mat-icon {
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+    color: #000;
+  }
+}
+
+/* Notification styles */
+::ng-deep {
+  .mat-mdc-menu-panel {
+    background-color: #ffffff !important;
+    border-radius: 10px !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.03) !important;
+  }
+
+  .mat-mdc-menu-content {
+    padding: 0.5rem 0 !important;
+  }
+
+  .notification-menu {
+    min-width: 300px !important;
+    max-width: 350px !important;
+    
+    .empty-notifications {
+      padding: 1.25rem;
+      text-align: center;
+      color: #90a4ae;
+      font-size: 0.875rem;
+      background-color: #fafafa;
+      border-radius: 6px;
+      margin: 0.5rem;
+    }
+  }
+  
+  .mat-badge-content {
+    font-size: 10px !important;
+    width: 16px !important;
+    height: 16px !important;
+    line-height: 16px !important;
+  }
+  
+  .mat-menu-item {
+    color: #546e7a !important;
+    font-size: 0.875rem !important;
+    padding: 0.75rem 1.25rem !important;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    transition: all 0.2s ease !important;
+    margin: 0.125rem 0 !important;
+
+    &:hover {
+      background-color: rgba(255, 112, 67, 0.06) !important;
+      color: var(--primary) !important;
+      transform: translateX(2px) !important;
+    }
+  }
+}
+
+/* Media query for smaller screens */
+@media (max-width: 992px) {
+  .navbar {
+    padding: 0;
+  }
+  
+  .navbar-brand {
+    padding: 0 15px;
+    min-width: 160px;
+  }
+  
+  .navbar-links {
+    a {
+      padding: 0 10px;
+      font-size: 13px;
+      
+      mat-icon {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    height: 55px;
+    top: 36px; /* Fixed smaller pixel value for mobile */
+  }
+  
+  .navbar-brand {
+    height: 55px;
+    padding: 0 12px;
+    min-width: 140px;
+    
+    img {
+      width: 28px;
+      height: 28px;
+      margin-right: 8px;
+    }
+    
+    .brand-text {
+      font-size: 18px;
+    }
+  }
+  
+  .navbar-links {
+    padding-left: 12px;
+    
+    a {
+      height: 55px;
+      padding: 0 8px;
+      font-size: 12px;
+      
+      mat-icon {
+        font-size: 16px;
+        margin-right: 6px;
+      }
+    }
+  }
+  
+  .nav-actions {
+    padding-right: 15px;
+    
+    button {
+      margin-left: 12px;
+      
+      mat-icon {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+/* Add these styles to your existing CSS */
+.notification-icon-container {
+  position: relative;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: red;
+}
+
+.notification-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Notification menu styles */
+.notification-menu {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  width: 320px;
+  max-height: 400px;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.notification-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.notification-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: #f9f9f9;
+}
+
+.notification-item.unread {
+  background-color: #e8f4fd;
+}
+
+.notification-item.unread:hover {
+  background-color: #d6ecfc;
+}
+
+.notification-item mat-icon {
+  margin-right: 10px;
+  color: #555;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-message {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #777;
+  margin-top: 4px;
+}
+
+.no-notifications {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+
+.test-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  margin-left: 8px;
+  padding: 4px;
+}
+
+.test-button:hover {
+  color: #333;
+}

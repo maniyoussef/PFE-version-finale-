@@ -1,0 +1,20 @@
+<h2 mat-dialog-title>Refuser Ticket</h2>
+<mat-dialog-content>
+  <p>
+    Veuillez fournir un rapport de refus pour le ticket "{{
+      data.ticket.title
+    }}":
+  </p>
+  <textarea
+    matInput
+    [(ngModel)]="report"
+    placeholder="Raison du refus..."
+    rows="5"
+    required
+    cdkFocusInitial
+  ></textarea>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button (click)="onNoClick()">Annuler</button>
+  <button mat-button color="warn" (click)="submitRefusal()">Refuser</button>
+</mat-dialog-actions>

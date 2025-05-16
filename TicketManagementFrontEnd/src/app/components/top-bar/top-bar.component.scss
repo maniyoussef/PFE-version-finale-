@@ -1,0 +1,17 @@
+:host {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: var(--topbar-height, 40px);
+  z-index: 1000;
+  background: white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+
+.top-bar, .topbar {
+  position: static !important;
+} 

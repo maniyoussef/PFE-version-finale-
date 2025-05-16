@@ -1,0 +1,105 @@
+<!-- Main Content Area -->
+<!-- src/app/pages/admin/companies/companies.component.html -->
+<div class="companies-container">
+  <div class="particle-background"></div>
+
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Gestion des Sociétés</h1>
+      <div class="header-actions">
+        <div class="search-sort-container">
+          <div class="search-container">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Rechercher</mat-label>
+              <input matInput [(ngModel)]="searchTerm" placeholder="Nom, contact ou email..." />
+              <button *ngIf="searchTerm" matSuffix mat-icon-button (click)="searchTerm=''">
+                <mat-icon>close</mat-icon>
+              </button>
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+          </div>
+          <div class="sort-container">
+            <button class="sort-button" (click)="toggleSort()">
+              <mat-icon>{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              Trier par nom
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No companies state -->
+    <div *ngIf="!isLoading && getFilteredCompanies().length === 0" class="empty-state">
+      <mat-icon>business</mat-icon>
+      <p *ngIf="!searchTerm">Aucune société trouvée</p>
+      <p *ngIf="searchTerm">Aucune société ne correspond à votre recherche</p>
+    </div>
+
+    <!-- Companies Grid -->
+    <div *ngIf="!isLoading && getFilteredCompanies().length > 0" class="companies-grid" [@fadeInList]>
+      <mat-card *ngFor="let societe of getFilteredCompanies()" class="company-card" [@fadeIn]>
+        <mat-card-content>
+          <div class="company-icon">
+            <mat-icon>business</mat-icon>
+          </div>
+          <div class="company-info">
+            <h3 class="company-name">{{ societe.name }}</h3>
+            <p class="company-contact" *ngIf="societe.contactPerson">
+              <mat-icon>person</mat-icon> {{ societe.contactPerson }}
+            </p>
+            <p class="company-email" *ngIf="societe.email">
+              <mat-icon>email</mat-icon> {{ societe.email }}
+            </p>
+          </div>
+          <button 
+            mat-icon-button 
+            color="warn" 
+            class="delete-btn" 
+            (click)="supprimerSociete(societe)"
+            matTooltip="Supprimer cette société">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Add Company Form -->
+    <div class="add-company-form" [@fadeIn]>
+      <h2 class="form-title">Ajouter une nouvelle société</h2>
+      <div class="form-fields">
+        <mat-form-field appearance="outline">
+          <mat-label>Nom de la société</mat-label>
+          <input matInput [(ngModel)]="nouvelleSociete" placeholder="Entrez le nom de la société" required />
+          <mat-icon matPrefix>business</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Personne de contact</mat-label>
+          <input matInput [(ngModel)]="contactPerson" placeholder="Entrez le nom du contact" required />
+          <mat-icon matPrefix>person</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput [(ngModel)]="email" type="email" placeholder="Entrez l'email" required />
+          <mat-icon matPrefix>email</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <button 
+        mat-raised-button 
+        (click)="ajouterSociete()" 
+        [disabled]="!nouvelleSociete.trim() || !contactPerson.trim() || !email.trim()"
+        class="add-button">
+        <mat-icon>add</mat-icon> Ajouter la société
+      </button>
+    </div>
+  </div>
+</div>

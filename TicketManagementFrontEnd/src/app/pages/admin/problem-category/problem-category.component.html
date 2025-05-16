@@ -1,0 +1,77 @@
+<!-- problem-category.component.html -->
+<div class="category-container">
+  <div class="particle-background"></div>
+
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Problem Categories</h1>
+    </div>
+
+    <div class="category-form">
+      <form class="form-container" (ngSubmit)="addCategory()">
+        <mat-form-field class="form-field" appearance="outline">
+          <mat-label>Category Name</mat-label>
+          <input
+            matInput
+            [(ngModel)]="newCategoryName"
+            name="categoryName"
+            required
+          />
+        </mat-form-field>
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          [disabled]="!newCategoryName"
+        >
+          Add Category
+        </button>
+      </form>
+    </div>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <div *ngIf="isLoading" class="loading-container">
+      <div class="loading-spinner">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No categories state -->
+    <div *ngIf="!isLoading && categories.length === 0" class="empty-state">
+      <mat-icon>inbox</mat-icon>
+      <p>No categories found</p>
+    </div>
+
+    <!-- Categories Table -->
+    <div
+      *ngIf="!isLoading && categories.length > 0"
+      class="category-list-container"
+    >
+      <table class="category-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let category of categories">
+            <td>{{ category.name }}</td>
+            <td class="actions-cell">
+              <button
+                mat-icon-button
+                class="delete-button"
+                (click)="deleteCategory(category.id)"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

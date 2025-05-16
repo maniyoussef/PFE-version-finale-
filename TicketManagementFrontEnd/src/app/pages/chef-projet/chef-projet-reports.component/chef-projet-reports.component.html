@@ -1,0 +1,83 @@
+<div class="chef-projet-reports-container">
+  <div class="particle-background"></div>
+  <div class="animated-gradient"></div>
+
+  <!-- Main Content Area -->
+  <main class="chef-projet-main-content">
+    <div class="reports-container">
+      <div class="header">
+        <div class="title-section">
+          <h1 class="reports-title">Rapports des Tickets</h1>
+          <div class="total-count">{{ tickets.length }} rapport<span *ngIf="tickets.length !== 1">s</span></div>
+        </div>
+      </div>
+
+      <!-- Content Card -->
+      <div class="content-card">
+        <!-- Loading state -->
+        <div *ngIf="isLoading" class="loading-container">
+          <div class="ripple-loader">
+            <div></div>
+            <div></div>
+          </div>
+          <p>Chargement des rapports...</p>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="!isLoading && tickets.length === 0" class="empty-container">
+          <div class="empty-icon">
+            <mat-icon>description_off</mat-icon>
+          </div>
+          <h2>Aucun rapport trouvé</h2>
+          <p>Aucun rapport de refus trouvé pour vos projets</p>
+        </div>
+
+        <!-- Reports table -->
+        <div *ngIf="!isLoading && tickets.length > 0" class="reports-table-container">
+          <div class="reports-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Titre</th>
+                  <th>Projet</th>
+                  <th>Catégorie</th>
+                  <th>Priorité</th>
+                  <th>Statut</th>
+                  <th>Date de création</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ticket of tickets; let i = index" class="ticket-row" [attr.data-index]="i">
+                  <td class="id-cell">{{ ticket.id }}</td>
+                  <td class="title-cell">{{ ticket.title }}</td>
+                  <td class="project-cell">{{ ticket.project?.name || "N/A" }}</td>
+                  <td class="category-cell">{{ ticket.problemCategory?.name || "N/A" }}</td>
+                  <td class="priority-cell">
+                    <span class="priority-badge" [ngClass]="getPriorityClass(ticket.priority)">
+                      {{ ticket.priority }}
+                    </span>
+                  </td>
+                  <td class="status-cell">
+                    <span class="status-badge" [ngClass]="getStatusClass(ticket.status)">
+                      {{ ticket.status }}
+                    </span>
+                  </td>
+                  <td class="date-cell">{{ ticket.createdAt | date : "dd/MM/yyyy HH:mm" }}</td>
+                  <td class="actions-cell">
+                    <button class="details-button" (click)="openReportDialog(ticket)">
+                      <mat-icon>visibility</mat-icon>
+                      <span>Voir</span>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <router-outlet></router-outlet>
+  </main>
+</div>

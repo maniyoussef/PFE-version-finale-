@@ -1,0 +1,85 @@
+# Fix Instructions for Ticket Status Issues
+
+## Problem
+Currently, there's an issue with ticket status handling: 
+- When clicking "Non résolu", the dialog opens to ask for a report, but the ticket changes to "Résolu" status
+- When clicking "Résolu", the dialog opens for report creation, but after submission the ticket changes to "Non résolu"
+
+## Solution
+
+Make the following changes:
+
+1. In `TicketManagementFrontEnd/src/app/pages/collaborateur/collaborateur-tickets/collaborateur-tickets.component.ts`:
+
+   a. For the `openResolveReportDialog` function:
+   ```javascript
+   // Make sure we're using and passing the correct status (RESOLVED)
+   this.tickets[index] = {
+     ...this.tickets[index],
+     status: this.STATUS.RESOLVED, // Ensure correct status is set
+     report: report,
+     workFinished: true,
+   };
+   
+   // In the API call, ensure we're passing RESOLVED status
+   this.ticketService.updateTicketStatus(ticket.id, this.STATUS.RESOLVED, report)
+   ```
+
+   b. For the `openUnresolveReportDialog` function:
+   ```javascript
+   // Make sure we're using and passing the correct status (UNRESOLVED)
+   this.tickets[index] = {
+     ...this.tickets[index],
+     status: this.STATUS.UNRESOLVED, // Ensure correct status is set
+     report: report,
+     workFinished: true,
+   };
+   
+   // In the API call, ensure we're passing UNRESOLVED status
+   this.ticketService.updateTicketStatus(ticket.id, this.STATUS.UNRESOLVED, report)
+   ```
+
+2. In `TicketManagementFrontEnd/src/app/services/ticket.service.ts`:
+
+   a. For the `updateTicketStatus` method, add detailed logging:
+   ```javascript
+   // Log the exact values being sent to help with debugging
+   console.log(`[TicketService] Status update details:`, {
+     ticketId,
+     originalStatus: status,
+     normalizedApiStatus: apiStatus,
+     includesReport: report !== undefined
+   });
+   
+   // After receiving the response:
+   console.log(`[TicketService] Successfully updated ticket ${ticketId} status to ${status} (API: ${apiStatus})`);
+   console.log(`[TicketService] Response ticket status: ${updatedTicket.status}`);
+   
+   // Ensure the ticket in the response has the proper UI status format
+   if (updatedTicket.status === apiStatus) {
+     updatedTicket.status = this.normalizeStatusForUi(apiStatus);
+     console.log(`[TicketService] Normalized response status to: ${updatedTicket.status}`);
+   }
+   ```
+
+   b. For the `normalizeStatusForApi` and `normalizeStatusForUi` methods, add debugging logs:
+   ```javascript
+   // Log the received status to help with debugging
+   console.log(`[TicketService] normalizeStatusForApi did not find exact match for status: "${status}"`);
+
+   // Log failures to help with debugging
+   console.log(`[TicketService] normalizeStatusForUi did not find match for status: "${status}"`);
+   ```
+
+3. Check the `resolveTicketWithoutReport` function to ensure it's using the correct status as well.
+
+## Additional Debugging
+
+If the issues persist after these changes, you should:
+
+1. Add console.log statements to verify exactly which status values are being passed through each step
+2. Check the backend API response to see what status value is being returned
+3. Consider adding explicit status constants (e.g., `const RESOLVED = 'Résolu'`) to avoid string typos
+4. Inspect the network requests to verify the correct status value is being sent to the API
+
+The main goal is to ensure the UI always shows the status that was explicitly selected by the user, not the opposite status. 

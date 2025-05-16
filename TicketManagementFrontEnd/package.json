@@ -1,0 +1,53 @@
+{
+  "name": "ticket-management-front-end",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "lint": "ng lint"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "~16.2.6",
+    "@angular/cdk": "~16.2.6",
+    "@angular/common": "~16.2.6",
+    "@angular/compiler": "~16.2.6",
+    "@angular/core": "~16.2.6",
+    "@angular/forms": "~16.2.6",
+    "@angular/material": "~16.2.6",
+    "@angular/platform-browser": "~16.2.6",
+    "@angular/platform-browser-dynamic": "~16.2.6",
+    "@angular/router": "~16.2.6",
+    "@auth0/auth0-angular": "^2.2.3",
+    "@types/three": "^0.173.0",
+    "chart.js": "^4.4.0",
+    "gsap": "^3.12.7",
+    "ng2-charts": "^4.0.0",
+    "ngx-flag-icon-css": "^1.0.1",
+    "rxjs": "~7.8.1",
+    "sass": "^1.66.1",
+    "three": "^0.173.0",
+    "tslib": "^2.6.2",
+    "xlsx": "^0.18.5",
+    "zone.js": "~0.13.1"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "~16.2.6",
+    "@angular/cli": "~16.2.6",
+    "@angular/compiler-cli": "~16.2.6",
+    "@types/jasmine": "~5.1.0",
+    "angular-eslint": "19.4.0",
+    "eslint": "^9.26.0",
+    "jasmine-core": "~5.5.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "typescript": "~5.1.6",
+    "typescript-eslint": "8.32.0"
+  }
+}

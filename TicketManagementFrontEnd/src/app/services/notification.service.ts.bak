@@ -1,0 +1,2315 @@
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { HttpClient } from '@angular/common/http';
+import { catchError, tap, finalize } from 'rxjs/operators';
+
+export enum NotificationType {
+  NEW_TICKET = 'NEW_TICKET',
+  TICKET_ACCEPTED = 'TICKET_ACCEPTED',
+  TICKET_REFUSED = 'TICKET_REFUSED',
+  TICKET_RESOLVED = 'TICKET_RESOLVED',
+  TICKET_UNRESOLVED = 'TICKET_UNRESOLVED',
+  TICKET_STATUS_CHANGED = 'TICKET_STATUS_CHANGED',
+  TICKET_ASSIGNED = 'TICKET_ASSIGNED',
+  COMMENT_ADDED = 'COMMENT_ADDED',
+  OTHER = 'OTHER'
+}
+
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  CHEF_PROJET = 'CHEF_PROJET',
+  COLLABORATEUR = 'COLLABORATEUR',
+  CLIENT = 'CLIENT',
+  USER = 'USER'
+}
+
+// Server notification interface for API responses
+export interface ApiNotification {
+  id: number;
+  userId: number;
+  message: string;
+  type: string;
+  relatedTicketId?: number;
+  route?: string;
+  isRead: boolean;
+  createdAt: string;  // ISO timestamp from server
+}
+
+export interface Notification {
+  id: string;
+  message: string;
+  route: string;
+  timestamp: Date;
+  isRead: boolean;
+  type: NotificationType;
+  relatedId?: number; // Ticket ID, Project ID, etc.
+  userId?: number;
+  icon?: string;    // Icon to display for the notification
+  comment?: string; // Additional information about the notification
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class NotificationService {
+  private storageKey = 'notifications';
+  private notifications = new BehaviorSubject<Notification[]>([]);
+  private notificationCount = new BehaviorSubject<number>(0);
+  private debugMode = false; // Set to false by default
+  private assignmentDebugMode = false; // Set to false by default
+  private lastRefreshTime = 0; // Track last refresh to prevent too frequent refreshes
+  private apiUrl = 'http://localhost:5000/api/notifications'; // API base URL
+  private preventRefetchAfterClear = false; // Flag to prevent immediate refetch after clearing
+
+  public notifications$ = this.notifications.asObservable();
+  public notificationCount$ = this.notificationCount.asObservable();
+
+  constructor(
+    private snackBar: MatSnackBar,
+    private http: HttpClient
+  ) {
+    console.log('[NotificationService] Initializing');
+    
+    // Disable debug logging - this will stop the excessive console logs
+    this.debugMode = false;
+    this.assignmentDebugMode = false;
+    
+    // CRITICAL FIX: Make sure we're looking at the right storage key
+    this.forceStorageKeyConsistency();
+    
+    // Load notifications from storage
+    this.loadNotificationsFromStorage();
+    
+    // Check and log current notifications to help with debugging
+    setTimeout(() => {
+      const notificationCount = this.notifications.value.length;
+      const unreadCount = this.notificationCount.value;
+      console.log(`[NotificationService] Ready with ${notificationCount} notifications (${unreadCount} unread)`);
+      
+      // Set up a controlled periodic refresh that doesn't spam the console
+      this.setupControlledPeriodicRefresh();
+    }, 1000);
+  }
+
+  private debugLog(message: string, data?: any): void {
+    if (this.debugMode) {
+      if (data) {
+        console.log(`[NotificationService] ${message}`, data);
+      } else {
+        console.log(`[NotificationService] ${message}`);
+      }
+    }
+  }
+
+  private assignmentLog(message: string, data?: any): void {
+    if (this.assignmentDebugMode) {
+      if (data) {
+        console.log(`[NotificationService][Assignment] ${message}`, data);
+      } else {
+        console.log(`[NotificationService][Assignment] ${message}`);
+      }
+    }
+  }
+
+  public setDebugMode(enabled: boolean): void {
+    this.debugMode = enabled;
+    console.log(`[NotificationService] Debug mode ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  public setAssignmentDebugMode(enabled: boolean): void {
+    this.assignmentDebugMode = enabled;
+    console.log(`[NotificationService] Assignment debug mode ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  private forceStorageKeyConsistency(): void {
+    // Check if we have notifications in the old storage key
+    const oldStorageData = localStorage.getItem('user_notifications');
+    const newStorageData = localStorage.getItem('notifications');
+    
+    console.log(`[NotificationService] Storage consistency check: Old key has data: ${!!oldStorageData}, New key has data: ${!!newStorageData}`);
+    
+    if (oldStorageData && (!newStorageData || JSON.parse(newStorageData).length === 0)) {
+      // Copy from old to new
+      localStorage.setItem('notifications', oldStorageData);
+      console.log('[NotificationService] Migrated notifications from old storage key to new one');
+    }
+    
+    // Force this service to use the same key as the ticket service
+    this.storageKey = 'notifications';
+  }
+
+  private loadNotificationsFromStorage(): void {
+    try {
+      // Force storage key consistency
+      this.forceStorageKeyConsistency();
+      
+      // Check both possible storage locations
+      const storedNotifications = localStorage.getItem(this.storageKey);
+      
+      if (!storedNotifications) {
+        this.debugLog('[NotificationService] No stored notifications found - creating empty array');
+        this.notifications.next([]);
+        return;
+      }
+      
+      // Parse the notifications
+      let parsedNotifications: Notification[] = [];
+      try {
+        parsedNotifications = JSON.parse(storedNotifications);
+        this.debugLog(`[NotificationService] Loaded ${parsedNotifications.length} notifications from storage`);
+        
+        // Format dates properly
+        parsedNotifications = parsedNotifications.map(n => ({
+          ...n,
+          timestamp: new Date(n.timestamp)
+        }));
+        
+        // Filter for notifications that might be relevant to current user
+        parsedNotifications = this.filterNotificationsForCurrentUser(parsedNotifications);
+        
+        // CRITICAL FIX: Check for and format older chef projet notifications
+        parsedNotifications = this.identifyOlderChefProjetNotifications(parsedNotifications);
+        
+        // CRITICAL FIX: Always check for USER_ID match explicitly
+        parsedNotifications = this.forceUserIdMatch(parsedNotifications);
+        
+        this.notifications.next(parsedNotifications);
+        this.updateNotificationCount();
+        
+        // DEBUGGING: Log the current notifications after all processing
+        const currentUserId = Number(localStorage.getItem('userId') || '0');
+        console.log(`[NotificationService] STORAGE DEBUG: Loaded ${parsedNotifications.length} notifications for user ${currentUserId}`);
+        
+        // Show notification types breakdown
+        const typeCount: Record<string, number> = {};
+        parsedNotifications.forEach(n => {
+          typeCount[n.type] = (typeCount[n.type] || 0) + 1;
+        });
+        console.log(`[NotificationService] Notification types loaded:`, typeCount);
+        
+        if (parsedNotifications.length > 0) {
+          console.log(`[NotificationService] Sample notification:`, parsedNotifications[0]);
+        }
+      } catch (e) {
+        console.error('[NotificationService] Error parsing notifications from storage', e);
+        this.notifications.next([]);
+      }
+    } catch (e) {
+      console.error('[NotificationService] Error loading notifications from storage', e);
+      this.notifications.next([]);
+    }
+  }
+
+  // IMPROVEMENT: Add method to clean up notifications before storing them
+  private cleanupNotifications(notifications: Notification[]): Notification[] {
+    try {
+      console.log(`[NotificationService] Cleaning up ${notifications.length} notifications before storage`);
+      
+      // First get all chef projet assignment notifications
+      const chefProjetNotifications = notifications.filter(n => 
+        (n.type === NotificationType.TICKET_ASSIGNED &&
+         n.message && n.message.toLowerCase().includes('par le chef projet')) ||
+        (n.id && n.id.includes('chef_'))
+      );
+      
+      console.log(`[NotificationService] Found ${chefProjetNotifications.length} chef projet notifications to cleanup`);
+      
+      // Group chef projet notifications by ticket ID to find duplicates
+      const ticketGroups = new Map<number, Notification[]>();
+      chefProjetNotifications.forEach(notification => {
+        if (notification.relatedId) {
+          const ticketId = notification.relatedId;
+          if (!ticketGroups.has(ticketId)) {
+            ticketGroups.set(ticketId, []);
+          }
+          ticketGroups.get(ticketId)?.push(notification);
+        }
+      });
+      
+      // List of notifications to remove (duplicates)
+      const notificationsToRemove: string[] = [];
+      
+      // For each ticket ID, keep only the newest notification
+      ticketGroups.forEach((ticketNotifications, ticketId) => {
+        if (ticketNotifications.length > 1) {
+          console.log(`[NotificationService] Found ${ticketNotifications.length} duplicate chef projet notifications for ticket ${ticketId}`);
+          
+          // Sort by timestamp (newest first)
+          const sorted = [...ticketNotifications].sort((a, b) => {
+            return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+          });
+          
+          // Keep the newest one, mark others for removal
+          for (let i = 1; i < sorted.length; i++) {
+            notificationsToRemove.push(sorted[i].id);
+          }
+        }
+      });
+      
+      // Get all non-chef projet notifications
+      const nonChefNotifications = notifications.filter(n => 
+        !(n.type === NotificationType.TICKET_ASSIGNED && 
+          n.message && n.message.toLowerCase().includes('par le chef projet')) &&
+        !(n.id && n.id.includes('chef_'))
+      );
+      
+      // Get chef projet notifications excluding the ones marked for removal
+      const cleanedChefNotifications = chefProjetNotifications.filter(n => 
+        !notificationsToRemove.includes(n.id)
+      );
+      
+      // Log cleanup results
+      if (notificationsToRemove.length > 0) {
+        console.log(`[NotificationService] Removed ${notificationsToRemove.length} duplicate chef projet notifications`);
+      }
+      
+      // Combine all cleaned notifications
+      const result = [...cleanedChefNotifications, ...nonChefNotifications];
+      console.log(`[NotificationService] Cleanup complete: ${result.length} notifications remaining`);
+      
+      return result;
+    } catch (e) {
+      console.error('[NotificationService] Error cleaning up notifications:', e);
+      return notifications; // Return original notifications if cleanup fails
+    }
+  }
+
+  private saveNotificationsToStorage(): void {
+    try {
+      // IMPROVEMENT: Clean up notifications before saving to remove duplicates
+      const cleanedNotifications = this.cleanupNotifications(this.notifications.value);
+      const serialized = JSON.stringify(cleanedNotifications);
+      
+      // Log storage operation for debugging
+      console.log(`[NotificationService] Saving ${cleanedNotifications.length} notifications to storage`);
+      
+      localStorage.setItem(this.storageKey, serialized);
+      
+      // Verify storage operation
+      const savedSize = serialized.length;
+      console.log(`[NotificationService] Saved ${savedSize} bytes to localStorage`);
+      
+      // Create a simple backup in case the main storage gets corrupted
+      try {
+        localStorage.setItem(this.storageKey + '_backup', serialized);
+      } catch (backupError) {
+        console.warn('[NotificationService] Could not create backup of notifications', backupError);
+      }
+    } catch (error) {
+      console.error('[NotificationService] Error saving notifications to storage:', error);
+      
+      // Try to save a simplified version if the full version fails
+      try {
+        // Create a simplified version with only essential data
+        const simplified = this.notifications.value.map(n => ({
+          id: n.id,
+          message: n.message,
+          route: n.route,
+          type: n.type,
+          userId: n.userId,
+          isRead: n.isRead,
+          timestamp: n.timestamp
+        }));
+        localStorage.setItem(this.storageKey, JSON.stringify(simplified));
+        console.log('[NotificationService] Saved simplified notifications as fallback');
+      } catch (fallbackError) {
+        console.error('[NotificationService] Even simplified save failed:', fallbackError);
+      }
+    }
+  }
+
+  private updateNotificationCount(): void {
+    const unreadCount = this.notifications.value.filter(n => !n.isRead).length;
+    this.notificationCount.next(unreadCount);
+  }
+
+  public addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>): void {
+    try {
+      const now = new Date();
+      const id = `${now.getTime()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create a new notification with default values
+      const newNotification: Notification = {
+        id,
+        timestamp: now,
+        isRead: false,
+        ...notification
+      };
+      
+      // Add to the beginning of the array
+      const currentNotifications = this.notifications.value;
+      this.notifications.next([newNotification, ...currentNotifications]);
+      
+      // Update local storage and notification count
+      this.updateNotificationCount();
+      this.saveNotificationsToStorage();
+    } catch (error) {
+      console.error('[NotificationService] Error adding notification:', error);
+    }
+  }
+
+  public markAsRead(notificationId: string): void {
+    const updatedNotifications = this.notifications.value.map(n =>
+      n.id === notificationId ? { ...n, isRead: true } : n
+    );
+    this.notifications.next(updatedNotifications);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+  }
+
+  public markAllAsRead(): void {
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    if (currentUserId === 0) {
+      console.log('[NotificationService] Cannot mark notifications as read - no user ID found');
+      return;
+    }
+    
+    console.log(`[NotificationService] Marking all notifications as read for user ${currentUserId}`);
+    
+    // First update the local notifications immediately for UI responsiveness
+    const updatedNotifications = this.notifications.value.map(n => ({ ...n, isRead: true }));
+    this.notifications.next(updatedNotifications);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Set the flag to prevent refetching immediately
+    this.preventRefetchAfterClear = true;
+    
+    // Then update on the server
+    this.http.patch(`${this.apiUrl}/user/${currentUserId}/read-all`, {})
+      .pipe(
+        tap(response => {
+          console.log(`[NotificationService] Successfully marked all notifications as read on server`, response);
+          this.showSnackbarNotification('Toutes les notifications ont été marquées comme lues', 'OK');
+        }),
+        catchError(error => {
+          console.error('[NotificationService] Error marking all notifications as read on server:', error);
+          return of(null);
+        }),
+        finalize(() => {
+          // Reset the flag after a delay to prevent immediate refetch
+          setTimeout(() => {
+            this.preventRefetchAfterClear = false;
+          }, 5000);
+        })
+      )
+      .subscribe();
+  }
+
+  public clearNotifications(): void {
+    console.log('[NotificationService] Clearing all notifications');
+    
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    if (currentUserId === 0) {
+      console.log('[NotificationService] Cannot clear notifications - no user ID found');
+      return;
+    }
+    
+    // Clear in-memory notifications first for immediate UI feedback
+    this.notifications.next([]);
+    this.updateNotificationCount();
+    
+    // CRITICAL FIX: Ensure we clear localStorage properly
+    try {
+      // Delete the main notification storage
+      localStorage.removeItem(this.storageKey);
+      console.log('[NotificationService] Successfully removed notifications from localStorage');
+      
+      // Also clear backup storage keys that might contain old notifications
+      localStorage.removeItem(this.storageKey + '_backup');
+      localStorage.removeItem('user_notifications');
+      
+      // For extra certainty, set an empty array instead of completely removing
+      localStorage.setItem(this.storageKey, JSON.stringify([]));
+      
+      // Force a backup of the empty array
+      localStorage.setItem(this.storageKey + '_backup', JSON.stringify([]));
+      
+      console.log('[NotificationService] All notification storage locations cleared');
+    } catch (e) {
+      console.error('[NotificationService] Error clearing notifications from localStorage:', e);
+    }
+    
+    // Set the flag to prevent refetching immediately
+    this.preventRefetchAfterClear = true;
+    
+    // Then clear on the server
+    this.http.delete(`${this.apiUrl}/user/${currentUserId}`)
+      .pipe(
+        tap(response => {
+          console.log(`[NotificationService] Successfully deleted all notifications on server`, response);
+        }),
+        catchError(error => {
+          console.error('[NotificationService] Error deleting notifications on server:', error);
+          return of(null);
+        }),
+        finalize(() => {
+          // Reset the flag after a delay to prevent immediate refetch
+          setTimeout(() => {
+            this.preventRefetchAfterClear = false;
+          }, 5000);
+        })
+      )
+      .subscribe();
+    
+    // Show confirmation
+    this.showSnackbarNotification('Toutes les notifications ont été effacées', 'OK');
+  }
+
+  public showSuccess(message: string): void {
+    this.snackBar.open(message, 'Fermer', {
+      duration: 3000,
+      panelClass: ['success-snackbar']
+    });
+  }
+
+  public showError(message: string): void {
+    this.snackBar.open(message, 'Fermer', {
+      duration: 5000,
+      panelClass: ['error-snackbar']
+    });
+  }
+
+  // Notification helpers for specific events
+  public notifyTicketStatusChange(
+    ticketTitle: string,
+    ticketId: number,
+    previousStatus: string,
+    newStatus: string,
+    userId: number
+  ): void {
+    const message = `Le statut de votre ticket "${ticketTitle}" a changé de "${previousStatus}" à "${newStatus}"`;
+    
+    // Always create the notification - let the receiver's client filter
+    this.addNotification({
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type: NotificationType.TICKET_STATUS_CHANGED,
+      relatedId: ticketId,
+      userId
+    });
+
+    this.showSnackbarNotification(message, 'Voir Ticket');
+  }
+
+  public notifyCommentAdded(ticketTitle: string, ticketId: number, commenterName: string, userId: number): void {
+    const message = `${commenterName} a ajouté un commentaire à votre ticket "${ticketTitle}"`;
+    
+    // Create a unique ID for debugging
+    const uniqueId = `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // IMPORTANT: The notification is FOR the recipient (userId), not the commenter!
+    const notification = {
+      id: uniqueId,
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type: NotificationType.COMMENT_ADDED,
+      relatedId: ticketId,
+      userId: userId,  // This must be the recipient's ID (the owner of the ticket)
+      timestamp: new Date(),
+      isRead: false
+    };
+    
+    // Add to notifications collection
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([notification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Also show a snackbar
+    this.showSnackbarNotification(message, 'Voir Ticket');
+  }
+
+  public notifyTicketAssigned(ticketTitle: string, ticketId: number, userId: number): void {
+    const message = `Votre ticket "${ticketTitle}" a été assigné à un collaborateur`;
+    
+    // Use assignment-specific logging
+    this.assignmentLog(`Ticket assigned notification for user ${userId}`, { ticketId, ticketTitle });
+    
+    // Create a unique ID for better tracking
+    const uniqueId = `assign_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create a notification object directly
+    const notification = {
+      id: uniqueId,
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type: NotificationType.TICKET_ASSIGNED,
+      relatedId: ticketId,
+      userId,
+      timestamp: new Date(),
+      isRead: false
+    };
+    
+    // Log detailed assignment notification
+    this.assignmentLog(`Full assignment notification details:`, notification);
+    
+    // Add to notifications collection
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([notification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    this.assignmentLog(`Assignment notification saved for user ${userId}`);
+
+    // Also show a snackbar notification
+    this.showSnackbarNotification(message, 'Voir Ticket');
+  }
+
+  public notifyNewTicket(ticketTitle: string, ticketId: number, userId?: number): void {
+    const message = `Nouveau ticket créé: "${ticketTitle}"`;
+    
+    // Use provided userId if available, otherwise try to get adminId from localStorage
+    const targetUserId = userId || (localStorage.getItem('adminId') ? Number(localStorage.getItem('adminId')) : undefined);
+    
+    if (targetUserId) {
+      this.addNotification({
+        message,
+        route: `/admin/tickets/${ticketId}`,
+        type: NotificationType.NEW_TICKET,
+        relatedId: ticketId,
+        userId: targetUserId
+      });
+    } else {
+      console.warn(`[NotificationService] No admin ID available for notification of new ticket ${ticketId}`);
+    }
+  }
+
+  public notifyTicketAccepted(ticketTitle: string, ticketId: number, userId: number): void {
+    const message = `Votre ticket "${ticketTitle}" a été accepté`;
+    
+    // Always notify ticket owner
+    this.addNotification({
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type: NotificationType.TICKET_ACCEPTED,
+      relatedId: ticketId,
+      userId
+    });
+
+    this.showSnackbarNotification(message, 'Voir Ticket');
+  }
+
+  public notifyTicketRefused(ticketTitle: string, ticketId: number, reason: string, userId: number): void {
+    const message = `Votre ticket "${ticketTitle}" a été refusé: ${reason}`;
+    
+    // Always notify ticket owner
+    this.addNotification({
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type: NotificationType.TICKET_REFUSED,
+      relatedId: ticketId,
+      userId
+    });
+
+    this.showSnackbarNotification(message, 'Voir Ticket');
+  }
+
+  public notifyTicketResolved(ticketTitle: string, ticketId: number, userId: number, resolved: boolean = true): void {
+    const statusText = resolved ? 'résolu' : 'non résolu';
+    const message = `Votre ticket "${ticketTitle}" a été marqué comme ${statusText}`;
+    const notificationType = resolved ? NotificationType.TICKET_RESOLVED : NotificationType.TICKET_UNRESOLVED;
+    
+    console.log(`[NotificationService] Creating ${notificationType} notification for ticket ${ticketId}`);
+    
+    // Generate a special ID for resolution notifications to help with tracking
+    const uniqueId = `resolution_${userId}_${ticketId}_${Date.now()}`;
+    
+    // Create notification object with high visibility
+    const notification = {
+      id: uniqueId,
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type: notificationType,
+      relatedId: ticketId,
+      userId,
+      timestamp: new Date(),
+      isRead: false  // Always set as unread to ensure visibility
+    };
+    
+    // Add directly to notifications collection
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([notification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Always show snackbar for resolution notifications
+    this.showSnackbarNotification(message, 'Voir Ticket');
+    
+    console.log(`[NotificationService] Created ${statusText} notification with ID ${uniqueId} for user ${userId}`);
+  }
+
+  public showSnackbarNotification(message: string, action: string): void {
+    try {
+      this.snackBar.open(message, action, {
+        duration: 4000,
+        panelClass: ['notification-snackbar'],
+        horizontalPosition: 'end',
+        verticalPosition: 'top'
+      });
+    } catch (error) {
+      console.error('[NotificationService] Error showing snackbar:', error);
+      // Fallback - don't crash if snackbar fails
+    }
+  }
+  
+  // Add a method to synchronize local notifications with backend
+  private synchronizeNotificationsWithBackend(): void {
+    const userId = Number(localStorage.getItem('userId') || '0');
+    if (userId === 0) {
+      console.log('[NotificationService] Cannot synchronize notifications - no user ID found');
+      return;
+    }
+    
+    console.log(`[NotificationService] Synchronizing notifications with backend for user ${userId}`);
+    
+    // Get local notifications
+    const localNotifications = this.notifications.value;
+    
+    // Get backend notifications
+    this.http.get<ApiNotification[]>(`${this.apiUrl}/user/${userId}`)
+      .pipe(
+        catchError(error => {
+          console.error('[NotificationService] Error fetching notifications from backend:', error);
+          return of([]);
+        })
+      )
+      .subscribe(backendNotifications => {
+        console.log(`[NotificationService] Received ${backendNotifications.length} notifications from backend`);
+        
+        // Track unique ticket+message combinations to prevent duplicates
+        const existingNotifications = new Set<string>();
+        
+        // Add all backend notifications to the set
+        backendNotifications.forEach(notification => {
+          const key = `${notification.relatedTicketId}-${notification.type}-${notification.message}`;
+          existingNotifications.add(key);
+        });
+        
+        // Find notifications that exist locally but not in backend
+        const localOnlyNotifications = localNotifications.filter(n => {
+          // Only consider notifications with numeric IDs (from backend) or special IDs for unresolved notifications
+          if (!n.id) return false;
+          
+          // Skip test notifications
+          if (n.id.includes('test_')) return false;
+          
+          // Create a unique key for this notification
+          const key = `${n.relatedId}-${n.type}-${n.message}`;
+          
+          // Skip if we already have this notification in the backend
+          if (existingNotifications.has(key)) {
+            return false;
+          }
+          
+          // Check if this is a numeric ID that should be in backend
+          const numericId = parseInt(n.id);
+          if (!isNaN(numericId)) {
+            return !backendNotifications.some(bn => bn.id === numericId);
+          }
+          
+          // Special case for unresolved notifications that should be synchronized
+          return n.type === NotificationType.TICKET_UNRESOLVED && 
+                 !n.id.includes('test_') && 
+                 n.relatedId !== undefined;
+        });
+        
+        console.log(`[NotificationService] Found ${localOnlyNotifications.length} notifications that need to be synchronized to backend`);
+        
+        // Limit the number of notifications to synchronize to prevent flooding
+        const maxSyncNotifications = 5;
+        const notificationsToSync = localOnlyNotifications.slice(0, maxSyncNotifications);
+        
+        if (notificationsToSync.length < localOnlyNotifications.length) {
+          console.log(`[NotificationService] Limiting synchronization to ${maxSyncNotifications} notifications to prevent flooding`);
+        }
+        
+        // Create these notifications in backend
+        notificationsToSync.forEach(notification => {
+          // Skip if missing required fields
+          if (!notification.message || !notification.type) return;
+        // Create these notifications in backend
+        localOnlyNotifications.forEach(notification => {
+          // Skip if missing required fields
+          if (!notification.message || !notification.type) return;
+          
+          this.http.post(`${this.apiUrl}`, {
+            userId: userId,
+            message: notification.message,
+            type: notification.type,
+            relatedTicketId: notification.relatedId,
+            route: notification.route
+          }).pipe(
+            catchError(error => {
+              console.error('[NotificationService] Error creating notification in backend:', error);
+              return of(null);
+            })
+          ).subscribe(result => {
+            if (result) {
+              console.log('[NotificationService] Successfully synchronized notification to backend:', result);
+            }
+          });
+        });
+      });
+  }
+
+  // Override the refreshNotifications method to include synchronization
+  public refreshNotifications(): void {
+    try {
+      // Check if refetching is prevented (during mark all as read or clear)
+      if (this.preventRefetchAfterClear) {
+        console.log('[NotificationService] Refresh skipped - notifications were just cleared or marked as read');
+        return;
+      }
+      
+      // First refresh from storage for immediate UI update
+      this.loadNotificationsFromStorage();
+      
+      // Get current time and check if refresh needed (prevent excessive refreshes)
+      const now = Date.now();
+      const timeSinceLastRefresh = now - this.lastRefreshTime;
+      
+      // ENHANCED: Check current notifications for resolution events to ensure they're shown
+      const currentNotifications = this.notifications.value;
+      const userId = Number(localStorage.getItem('userId') || '0');
+      
+      if (userId > 0) {
+        // Find all unread resolution notifications
+        const userResolutionNotifications = currentNotifications.filter(n => 
+          n.userId === userId && 
+          (n.type === NotificationType.TICKET_RESOLVED || 
+           n.type === NotificationType.TICKET_UNRESOLVED || 
+           (n.type === NotificationType.TICKET_STATUS_CHANGED && 
+            (n.message?.includes('résolu') || n.message?.includes('Résolu')))) && 
+          !n.isRead
+        );
+        
+        // If there are unread resolution notifications, make sure they're visible
+        if (userResolutionNotifications.length > 0) {
+          console.log(`[NotificationService] Found ${userResolutionNotifications.length} unread resolution notifications`);
+          
+          // Re-show the newest resolution notification to ensure user awareness
+          if (userResolutionNotifications.length > 0) {
+            const newestNotification = userResolutionNotifications.sort((a, b) => 
+              b.timestamp.getTime() - a.timestamp.getTime()
+            )[0];
+            
+            // Only show if it's fairly recent (last hour)
+            const notificationAge = now - newestNotification.timestamp.getTime();
+            if (notificationAge < 3600000) { // 1 hour in milliseconds
+              this.showSnackbarNotification(newestNotification.message, 'Voir Ticket');
+              console.log(`[NotificationService] Re-displayed recent resolution notification: "${newestNotification.message}"`);
+            }
+          }
+        }
+      }
+      
+      // Prevent refreshing more than once every 10 seconds (10000ms) - increased from 5s
+      if (timeSinceLastRefresh < 10000 && this.lastRefreshTime > 0) {
+        // Only log once every 50 attempts to reduce console spam
+        if (Math.random() < 0.02) {
+          console.log(`[NotificationService] Refresh throttled - last refresh was ${timeSinceLastRefresh}ms ago`);
+        }
+        return;
+      }
+      
+      this.lastRefreshTime = now;
+      
+      // Check for important notification counts
+      const currentUserId = Number(localStorage.getItem('userId') || '0');
+      if (currentUserId === 0) {
+        console.log('[NotificationService] No user ID found, skipping API refresh');
+        return;
+      }
+      
+      // NEW: Synchronize local notifications with backend
+      this.synchronizeNotificationsWithBackend();
+      
+      // Call the actual API instead of using a simulated timeout
+      this.fetchNotificationsFromApi().subscribe();
+    } catch (error) {
+      console.error('[NotificationService] Error refreshing notifications:', error);
+    }
+  }
+
+  // Alias for loading notifications without triggering the full refresh logic
+  public refreshFromStorage(): void {
+    // Load notifications directly from storage without calling refreshNotifications
+    this.loadNotificationsFromStorage();
+    
+    // Update notification counts
+    this.updateNotificationCount();
+    
+    // Log a single message
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    const notificationCount = this.notifications.value.length;
+    const userNotificationCount = this.getNotificationsForCurrentUser().length;
+    
+    console.log(`[NotificationService] Refreshed from storage: ${userNotificationCount} notifications for user ${currentUserId} (${notificationCount} total)`);
+  }
+
+  public forceWriteNotificationsToStorage(): void {
+    this.saveNotificationsToStorage();
+  }
+
+  // Used to migrate notifications from old format
+  public migrateGlobalNotifications(): void {
+    console.log('[NotificationService] Migration not needed in new implementation');
+  }
+
+  public addNotificationForRole(role: UserRole, notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>): void {
+    this.addNotification(notification);
+  }
+
+  // Add method to get notification by ID
+  public getNotificationById(id: string): Notification | undefined {
+    return this.notifications.value.find(n => n.id === id);
+  }
+
+  // Add method to get notifications by ticket ID
+  public getNotificationsForTicket(ticketId: number): Notification[] {
+    return this.notifications.value.filter(n => n.relatedId === ticketId);
+  }
+
+  // Method to get notifications for the current user (either by ID or role)
+  public getNotificationsForCurrentUser(): Notification[] {
+    // Get user info for filtering
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    const userRole = localStorage.getItem('userRole') || '';
+    
+    const allNotifications = this.notifications.value;
+    
+    // CRITICAL FIX: First check if we even have any notifications
+    if (allNotifications.length === 0) {
+      console.log(`[NotificationService] No notifications found in storage for any user`);
+      
+      // Try emergency scan to look for notifications in all storage keys
+      this.emergencyNotificationScan();
+      
+      // Check if we found any after emergency scan
+      if (this.notifications.value.length === 0) {
+        return [];
+      }
+    }
+    
+    // Start with an empty result array
+    let notificationsForUser: Notification[] = [];
+    
+    // 1. First include any notifications specifically targeted to this user
+    const directUserNotifications = allNotifications.filter(n => n.userId === currentUserId);
+    if (directUserNotifications.length > 0) {
+      console.log(`[NotificationService] Found ${directUserNotifications.length} notifications directly targeted to user ${currentUserId}`);
+      notificationsForUser.push(...directUserNotifications);
+    }
+    
+    // CRITICAL FIX: If we found no targeted notifications, check ALL notifications that might be missing userIds
+    if (directUserNotifications.length === 0) {
+      // Look for notifications that might be relevant to this user but missing userIds
+      const possibleUserNotifications = allNotifications.filter(n => 
+        !n.userId && (
+          n.type === NotificationType.TICKET_ASSIGNED ||
+          n.type === NotificationType.TICKET_STATUS_CHANGED ||
+          n.type === NotificationType.COMMENT_ADDED
+        )
+      );
+      
+      if (possibleUserNotifications.length > 0) {
+        console.log(`[NotificationService] Found ${possibleUserNotifications.length} notifications missing userIds that might be for user ${currentUserId}`);
+        
+        // Assign the current user ID to these notifications
+        const fixedNotifications = possibleUserNotifications.map(n => ({
+          ...n,
+          userId: currentUserId
+        }));
+        
+        // Add them to the results
+        notificationsForUser.push(...fixedNotifications);
+        
+        // Also update them in the main notifications collection
+        const updatedAllNotifications = allNotifications.map(n => {
+          if (!n.userId && (
+            n.type === NotificationType.TICKET_ASSIGNED ||
+            n.type === NotificationType.TICKET_STATUS_CHANGED ||
+            n.type === NotificationType.COMMENT_ADDED
+          )) {
+            return {...n, userId: currentUserId};
+          }
+          return n;
+        });
+        
+        // Update notifications collection
+        this.notifications.next(updatedAllNotifications);
+        
+        // Save to storage
+        this.saveNotificationsToStorage();
+      }
+    }
+    
+    // 2. Include notifications for the user's role
+    const userRoleUppercase = userRole.toUpperCase();
+    
+    // Check if user has admin role - admins see all notifications not targeted to specific users
+    if (userRoleUppercase === 'ADMIN') {
+      // For admins: Include any notifications without a userId
+      const adminNotifications = allNotifications.filter(n => !n.userId);
+      notificationsForUser.push(...adminNotifications);
+      
+      // Also include notifications with admin role
+      const adminRoleNotifications = allNotifications.filter(n => n.message?.includes('ADMIN'));
+      notificationsForUser.push(...adminRoleNotifications);
+    } 
+    // For chef projet role, include project-related notifications
+    else if (userRoleUppercase === 'CHEF_PROJET') {
+      const chefProjetNotifications = allNotifications.filter(n => 
+        // Include chef projet related announcements
+        n.message?.includes('chef projet') || 
+        n.message?.includes('CHEF_PROJET')
+      );
+      notificationsForUser.push(...chefProjetNotifications);
+    }
+    // For client role, include client notifications
+    else if (userRoleUppercase === 'CLIENT' || userRoleUppercase === 'USER') {
+      const clientNotifications = allNotifications.filter(n => 
+        n.message?.includes('CLIENT') || 
+        n.message?.includes('client')
+      );
+      notificationsForUser.push(...clientNotifications);
+    }
+    
+    // 3. Special case for chef projet tickets in Assigned status
+    // Look for notifications that mention assignment and chef projet
+    const chefProjetAssignments = allNotifications.filter(n => 
+      n.userId === currentUserId && 
+      (n.message?.toLowerCase().includes('chef projet') || n.id?.includes('chef_'))
+    );
+    
+    // If there are no chef projet assignments but we can see assignable tickets, 
+    // we should try a more aggressive check for missing notifications
+    if (chefProjetAssignments.length === 0) {
+      if (this.debugMode) {
+        console.log(`[NotificationService] No chef projet assignments found - checking for any assignment notifications`);
+      }
+      
+      // Check for any assignment notifications for this user
+      const anyAssignments = allNotifications.filter(n => 
+        n.userId === currentUserId && 
+        n.type === NotificationType.TICKET_ASSIGNED
+      );
+      
+      if (anyAssignments.length > 0 && this.debugMode) {
+        console.log(`[NotificationService] Found ${anyAssignments.length} general assignment notifications to include`);
+        // Force chef projet assignments to match any assignment notification for this user
+        chefProjetAssignments.push(...anyAssignments);
+      }
+      
+      // Emergency check: Force the service to look for any notifications
+      // that mention "assigné" or are assignment type
+      const emergencyAssignments = allNotifications.filter(n => 
+        n.message?.toLowerCase().includes('assigné') || 
+        n.type === NotificationType.TICKET_ASSIGNED
+      );
+      
+      if (emergencyAssignments.length > 0 && this.debugMode) {
+        console.log(`[NotificationService] Emergency check: Found ${emergencyAssignments.length} potential assignment notifications`);
+        
+        // Force ownership for current user for at least one notification per ticket
+        const ticketIds = new Set<number>();
+        emergencyAssignments.forEach(n => {
+          if (n.relatedId && !ticketIds.has(n.relatedId)) {
+            ticketIds.add(n.relatedId);
+            
+            // Create a clone with the current user ID
+            const clonedNotification = { ...n, userId: currentUserId, id: `forced_${n.id}` };
+            
+            // Only log if debug mode is enabled
+            if (this.debugMode) {
+              console.log(`[NotificationService] Forcing ownership of assignment notification for ticket ${n.relatedId}`);
+            }
+            chefProjetAssignments.push(clonedNotification);
+          }
+        });
+      }
+    }
+    
+    // Add all chef projet assignments to the results
+    notificationsForUser.push(...chefProjetAssignments);
+    
+    // 4. Remove duplicates by ID (keep the first occurrence of each ID)
+    const uniqueIds = new Set<string>();
+    const uniqueNotifications = notificationsForUser.filter(n => {
+      if (!n.id || uniqueIds.has(n.id)) {
+        return false;
+      }
+      uniqueIds.add(n.id);
+      return true;
+    });
+    
+    // 5. Sort by timestamp, newest first
+    const sortedNotifications = uniqueNotifications.sort((a, b) => {
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+    
+    // Always enable this log to help debug
+    console.log(`[NotificationService] Found ${sortedNotifications.length} notifications for user ${currentUserId} with role ${userRole}`);
+    if (sortedNotifications.length > 0) {
+      console.log(`[NotificationService] First notification: ${sortedNotifications[0].message} (type: ${sortedNotifications[0].type})`);
+    }
+    
+    return sortedNotifications;
+  }
+
+  // Get unread count for the current user
+  public getUnreadCountForCurrentUser(): number {
+    return this.getNotificationsForCurrentUser().filter(n => !n.isRead).length;
+  }
+
+  // Add a specialized notification method for chef projet actions
+  public notifyChefProjetAction(
+    ticketTitle: string, 
+    ticketId: number, 
+    action: string, 
+    userId: number, 
+    chefProjetName: string = "Le chef de projet"
+  ): void {
+    const message = `${chefProjetName} a ${action} votre ticket "${ticketTitle}"`;
+    
+    this.assignmentLog(`Chef projet action notification for user ${userId}: ${action}`, { 
+      ticketId, 
+      ticketTitle, 
+      actionType: action
+    });
+    
+    // Create a unique ID for better tracking
+    const uniqueId = `chef_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create notification type based on action
+    let notificationType = NotificationType.OTHER;
+    if (action.includes('assigné')) {
+      notificationType = NotificationType.TICKET_ASSIGNED;
+    } else if (action.includes('commenté') || action.includes('ajouté un commentaire')) {
+      notificationType = NotificationType.COMMENT_ADDED;
+    } else if (action.includes('accepté')) {
+      notificationType = NotificationType.TICKET_ACCEPTED;
+    } else if (action.includes('refusé')) {
+      notificationType = NotificationType.TICKET_REFUSED;
+    } else if (action.includes('status') || action.includes('statut')) {
+      notificationType = NotificationType.TICKET_STATUS_CHANGED;
+    }
+    
+    // Create a notification object
+    const notification = {
+      id: uniqueId,
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type: notificationType,
+      relatedId: ticketId,
+      userId,
+      timestamp: new Date(),
+      isRead: false
+    };
+    
+    // Log detailed notification
+    this.assignmentLog(`Chef projet action notification details:`, notification);
+    
+    // Add to notifications collection
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([notification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Also show a snackbar notification
+    this.showSnackbarNotification(message, 'Voir Ticket');
+  }
+
+  // Modified checkForChefProjetNotifications to reduce logging
+  public checkForChefProjetNotifications(): void {
+    // Prevent excessive refreshes (limit to once every 5 seconds)
+    const now = Date.now();
+    if (now - this.lastRefreshTime < 5000) {
+      // Silent return if called too frequently
+      return;
+    }
+    
+    // Update last refresh time
+    this.lastRefreshTime = now;
+    
+    // This method will re-scan localStorage for chef projet related notifications
+    try {
+      if (this.debugMode) {
+        console.log('[NotificationService] Checking localStorage for chef projet notifications');
+      }
+      
+      // Get current user info
+      const currentUserId = Number(localStorage.getItem('userId') || '0');
+      if (currentUserId === 0) {
+        if (this.debugMode) {
+          console.log('[NotificationService] No userId found in localStorage, cannot check for notifications');
+        }
+        return;
+      }
+      
+      // Get notifications from localStorage - main and backup locations
+      const getNotificationsFromStorage = (): Notification[] => {
+        const mainStorage = localStorage.getItem(this.storageKey);
+        const backupStorage = localStorage.getItem(this.storageKey + '_backup');
+        
+        if (mainStorage) {
+          try {
+            const parsed = JSON.parse(mainStorage);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            console.error('[NotificationService] Error parsing main storage', e);
+          }
+        }
+        
+        if (backupStorage) {
+          try {
+            const parsed = JSON.parse(backupStorage);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            console.error('[NotificationService] Error parsing backup storage', e);
+          }
+        }
+        
+        return [];
+      };
+      
+      // Get notifications from storage
+      const storedNotifications = getNotificationsFromStorage();
+      
+      if (this.debugMode) {
+        console.log(`[NotificationService] Found ${storedNotifications.length} notifications in storage`);
+      }
+      
+      // CRITICAL FIX: More aggressively identify chef projet notifications
+      // Look for notifications that:
+      // 1. Have a chef_ prefix in their ID
+      // 2. OR mention "chef projet" in their message
+      // 3. OR are backup notifications
+      // AND are for the current user
+      const chefProjetNotifications = storedNotifications.filter((n: any) => {
+        // Most direct: Look for notifications with chef_ prefix in ID
+        if (n.id && 
+            (n.id.includes('chef_') || n.id.includes('backup_')) && 
+            n.userId === currentUserId) {
+          return true;
+        }
+        
+        // Second: Look for notifications with specific message text about chef projet
+        if (n.userId === currentUserId && 
+            n.message && 
+            n.message.toLowerCase().includes('chef projet') &&
+            n.message.toLowerCase().includes('assigné')) {
+          return true;
+        }
+        
+        // Third: Look for notifications with our specific message pattern about assignment
+        if (n.userId === currentUserId && 
+            n.type === 'TICKET_ASSIGNED' &&
+            n.message && 
+            (n.message.toLowerCase().includes('votre ticket') || 
+             n.message.toLowerCase().includes('a été assigné') ||
+             n.message.toLowerCase().includes('par le chef projet'))) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      if (this.debugMode) {
+        console.log(`[NotificationService] Found ${chefProjetNotifications.length} chef projet notifications for user ${currentUserId}`);
+      }
+      
+      if (chefProjetNotifications.length > 0) {
+        // Add these to the current notifications collection if they're not already there
+        const currentNotifications = this.notifications.value;
+        const currentIds = currentNotifications.map(n => n.id);
+        
+        const newNotifications = chefProjetNotifications.filter((n: Notification) => !currentIds.includes(n.id));
+        
+        if (newNotifications.length > 0 && this.debugMode) {
+          console.log(`[NotificationService] Adding ${newNotifications.length} chef projet notifications that were missing`);
+        }
+          
+        // Format timestamps
+        const formattedNotifications = newNotifications.map((n: Notification) => ({
+          ...n,
+          timestamp: new Date(n.timestamp),
+          // CRITICAL FIX: Mark these as unread to make them more visible
+          isRead: false
+        }));
+        
+        if (formattedNotifications.length > 0) {
+          // Add to the current collection only if we found new ones
+          this.notifications.next([...formattedNotifications, ...currentNotifications]);
+          this.updateNotificationCount();
+          this.saveNotificationsToStorage();
+        }
+      } else if (this.debugMode) {
+        console.log('[NotificationService] No chef projet notifications found for current user');
+      }
+    } catch (e) {
+      console.error('[NotificationService] Error checking for chef projet notifications', e);
+    }
+  }
+
+  // CRITICAL FIX: Add method to force refresh notifications from backend
+  private checkBackendForAssignmentNotifications(): void {
+    console.log('[NotificationService] Attempting to check backend for latest assignment notifications');
+    
+    // This method would normally call your backend API to get the latest notifications
+    // For now, we'll use a simple timeout to simulate fetching from API and then check storage again
+    setTimeout(() => {
+      console.log('[NotificationService] Re-checking storage after simulated API fetch');
+      
+      // Store current notifications count for comparison
+      const beforeCount = this.notifications.value.length;
+      
+      // Force reload from storage
+      this.loadNotificationsFromStorage();
+      
+      // Log result of reload
+      const afterCount = this.notifications.value.length;
+      console.log(`[NotificationService] Notification count: before=${beforeCount}, after=${afterCount}`);
+      
+      if (afterCount > beforeCount) {
+        console.log('[NotificationService] Successfully refreshed notifications from storage');
+        this.showSnackbarNotification('Notifications mises à jour', 'OK');
+      }
+    }, 2000);
+  }
+
+  // Add manual check and force notification method for debugging
+  public forceChefProjetAssignmentNotification(ticketTitle: string, ticketId: number): void {
+    console.log(`[NotificationService] MANUAL: Creating chef projet assignment notification for ticket "${ticketTitle}"`);
+    
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    if (currentUserId === 0) {
+      console.error('[NotificationService] Cannot create manual notification - no user ID found');
+      return;
+    }
+    
+    // Create a chef projet assignment notification manually
+    this.notifyChefProjetTicketAssignment(ticketTitle, ticketId, currentUserId);
+    
+    // Show a success message
+    this.showSnackbarNotification(`Notification manuelle créée: "${ticketTitle}"`, 'OK');
+  }
+
+  // Add specialized method for chef projet ticket assignments with improved ID tracking
+  public notifyChefProjetTicketAssignment(
+    ticketTitle: string, 
+    ticketId: number, 
+    userId: number, 
+    chefProjetName: string = "Le chef de projet",
+    timestamp: Date = new Date()
+  ): void {
+    // CRITICAL FIX: Restore the previously working message format
+    const message = `Votre ticket "${ticketTitle}" a été assigné par le chef projet à un collaborateur`;
+    
+    this.assignmentLog(`Chef projet assignment notification for ticket creator/owner ${userId}`, { 
+      ticketId, 
+      ticketTitle, 
+      chefProjetName,
+      recipientUserId: userId,
+      timestamp: timestamp
+    });
+    
+    // CRITICAL FIX: Always create a new notification for assignments
+    // Remove the check for existing notifications to ensure a new one is always created
+    
+    // Create a unique ID with recognizable prefix for better tracking
+    // Include userId and timestamp for unique identification
+    const uniqueId = `chef_assign_${userId}_${timestamp.getTime()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    // CRITICAL FIX: Ensure correct route format based on user role
+    const userRole = localStorage.getItem('userRole') || 'USER';
+    const route = userRole.toUpperCase() === 'USER' ? 
+      `/user/mes-tickets/${ticketId}` : 
+      `/client/tickets/${ticketId}`;
+    
+    // Create the notification with the ticket assignment type
+    const notification = {
+      id: uniqueId,
+      message,
+      route,
+      type: NotificationType.TICKET_ASSIGNED,
+      relatedId: ticketId,
+      userId,  // This is the ticket creator/owner, NOT the chef projet
+      timestamp: timestamp,
+      isRead: false
+    };
+    
+    // Log detailed notification
+    this.assignmentLog(`Chef projet assignment notification details:`, notification);
+    
+    // CRITICAL FIX: First try to store directly to localStorage for higher reliability
+    try {
+      const existingNotifications = localStorage.getItem(this.storageKey);
+      if (existingNotifications) {
+        const notifs = JSON.parse(existingNotifications);
+        if (Array.isArray(notifs)) {
+          // Add to beginning of array
+          notifs.unshift(notification);
+          localStorage.setItem(this.storageKey, JSON.stringify(notifs));
+          this.assignmentLog(`Directly added notification to localStorage: ${uniqueId}`);
+        }
+      }
+    } catch (e) {
+      console.error('[NotificationService] Error directly adding notification to localStorage:', e);
+    }
+    
+    // Add to notifications collection
+    const currentNotifications = this.notifications.value;
+    
+    // CRITICAL FIX: Check if this exact notification already exists to avoid duplicates
+    const exactDuplicate = currentNotifications.find(n => 
+      n.relatedId === ticketId && 
+      n.userId === userId && 
+      n.type === NotificationType.TICKET_ASSIGNED &&
+      n.id === uniqueId
+    );
+    
+    if (!exactDuplicate) {
+      this.notifications.next([notification, ...currentNotifications]);
+      this.updateNotificationCount();
+      this.saveNotificationsToStorage();
+      this.assignmentLog(`Added chef projet notification to the notifications collection`);
+    }
+    
+    // CRITICAL FIX: Create multiple backup notifications with different ID patterns
+    // to maximize chances that at least one will be detected by the filtering logic
+    try {
+      // Create backup notification with alternate ID pattern
+      const backupId = `backup_chef_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const backupNotification = {
+        ...notification,
+        id: backupId
+      };
+      
+      // Add to notifications collection
+      const updatedNotifications = this.notifications.value;
+      updatedNotifications.unshift(backupNotification);
+      this.notifications.next(updatedNotifications);
+      
+      console.log(`[NotificationService] Created backup chef projet notification: ${backupId}`);
+      
+      // Force notification save to ensure it's persisted
+      this.saveNotificationsToStorage();
+      
+      // Create a second backup with a different message format to maximize detection
+      const alternateId = `chef_projet_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const alternateNotification = {
+        ...notification,
+        id: alternateId,
+        message: `Le chef de projet a assigné votre ticket "${ticketTitle}" à un collaborateur`
+      };
+      
+      // Add directly to localStorage for maximum reliability
+      const storedNotifications = localStorage.getItem(this.storageKey);
+      if (storedNotifications) {
+        const parsed = JSON.parse(storedNotifications);
+        if (Array.isArray(parsed)) {
+          parsed.unshift(alternateNotification);
+          localStorage.setItem(this.storageKey, JSON.stringify(parsed));
+          console.log(`[NotificationService] Created alternate format backup: ${alternateId}`);
+        }
+      }
+    } catch (e) {
+      console.error('[NotificationService] Error creating backup notifications:', e);
+    }
+    
+    // Also show a snackbar notification if this notification is for the current user
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    if (currentUserId === userId) {
+      this.showSnackbarNotification(message, 'Voir Ticket');
+    }
+  }
+
+  // Add notification method for collaborateurs being assigned to tickets
+  public notifyAssignedToCollaborateur(
+    ticketTitle: string, 
+    ticketId: number, 
+    userId: number
+  ): void {
+    const message = `Vous avez été assigné au ticket "${ticketTitle}"`;
+    
+    this.assignmentLog(`Assignment notification for collaborateur ${userId}`, { 
+      ticketId, 
+      ticketTitle 
+    });
+    
+    // Create a unique ID with recognizable prefix for better tracking
+    const uniqueId = `collab_assign_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    // Create the notification with the ticket assignment type
+    const notification = {
+      id: uniqueId,
+      message,
+      route: `/collaborateur/tickets/${ticketId}`,
+      type: NotificationType.TICKET_ASSIGNED,
+      relatedId: ticketId,
+      userId,
+      timestamp: new Date(),
+      isRead: false
+    };
+    
+    // Log detailed notification
+    this.assignmentLog(`Collaborateur assignment notification details:`, notification);
+    
+    // CRITICAL FIX: First try to store directly to localStorage for higher reliability
+    try {
+      const existingNotifications = localStorage.getItem(this.storageKey);
+      if (existingNotifications) {
+        const notifs = JSON.parse(existingNotifications);
+        if (Array.isArray(notifs)) {
+          // Add to beginning of array
+          notifs.unshift(notification);
+          localStorage.setItem(this.storageKey, JSON.stringify(notifs));
+          this.assignmentLog(`Directly added collaborateur notification to localStorage: ${uniqueId}`);
+        }
+      }
+    } catch (e) {
+      console.error('[NotificationService] Error directly adding collaborateur notification to localStorage:', e);
+    }
+    
+    // Add to notifications collection
+    const currentNotifications = this.notifications.value;
+    
+    // Check if this exact notification already exists to avoid duplicates
+    const exactDuplicate = currentNotifications.find(n => 
+      n.relatedId === ticketId && 
+      n.userId === userId && 
+      n.type === NotificationType.TICKET_ASSIGNED &&
+      n.id === uniqueId
+    );
+    
+    if (!exactDuplicate) {
+      this.notifications.next([notification, ...currentNotifications]);
+      this.updateNotificationCount();
+      this.saveNotificationsToStorage();
+      this.assignmentLog(`Added collaborateur notification to the notifications collection`);
+    }
+    
+    // Also show a snackbar notification if this notification is for the current user
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    if (currentUserId === userId) {
+      this.showSnackbarNotification(message, 'Voir Ticket');
+    }
+  }
+
+  // CRITICAL FIX: Also update the enhanced notification detection to match the new message format
+  private enhancedNotificationDetection(): void {
+    try {
+      const currentUserId = Number(localStorage.getItem('userId') || '0');
+      if (currentUserId === 0) return;
+      
+      console.log(`[NotificationService] Running enhanced notification detection for user ${currentUserId}`);
+      
+      const allNotifications = this.notifications.value;
+      
+      // Find assignment notifications
+      const assignmentNotifications = allNotifications.filter(n => 
+        n.type === NotificationType.TICKET_ASSIGNED);
+      
+      // CRITICAL FIX: Get current user role to ensure correct routes
+      const currentUserRole = localStorage.getItem('userRole') || 'USER';
+      
+      // Fix message text for chef projet assignments if needed
+      assignmentNotifications.forEach(n => {
+        if (n.userId === currentUserId && 
+            n.message && 
+            (n.message.includes('votre ticket') || n.message.includes('Votre ticket')) &&
+            n.message.includes('a été assigné')) {
+          
+          // Add "chef projet" marker to the message if not present
+          if (!n.message.toLowerCase().includes('chef projet') && 
+              !n.message.toLowerCase().includes('chef de projet') &&
+              !n.id?.includes('chef_')) {
+            
+            // Create a new ID with chef_ prefix for better detection
+            const newId = `chef_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Create a new notification with the updated message
+            const newNotification: Notification = {
+              id: newId,
+              message: `chef projet ${n.message}`,
+              route: n.route,
+              type: n.type,
+              relatedId: n.relatedId,
+              userId: n.userId,
+              timestamp: n.timestamp,
+              isRead: n.isRead
+            };
+            
+            // Replace the old notification with the new one
+            const updatedNotifications = this.notifications.value.map(notification =>
+              notification.id === n.id ? newNotification : notification
+            );
+            this.notifications.next(updatedNotifications);
+          }
+        }
+      });
+    } catch (e) {
+      console.error('[NotificationService] Error running enhanced notification detection:', e);
+    }
+  }
+
+  // CRITICAL FIX: Emergency scan of all localStorage for any notifications
+  private emergencyNotificationScan(): void {
+    try {
+      console.log('[NotificationService] Running emergency scan of localStorage for notifications');
+      
+      const currentUserId = Number(localStorage.getItem('userId') || '0');
+      if (currentUserId === 0) {
+        console.log('[NotificationService] Cannot run emergency scan - no user ID');
+        return;
+      }
+      
+      // Build a list of all storage keys we should check
+      const keysToCheck = [
+        'notifications',
+        'user_notifications', 
+        this.storageKey,
+        `notifications_${currentUserId}`,
+        `user_notifications_${currentUserId}`
+      ];
+      
+      // Try to check all possible storage keys
+      let allNotifications: Notification[] = [];
+      
+      keysToCheck.forEach(key => {
+        try {
+          const data = localStorage.getItem(key);
+          if (data) {
+            const parsed = JSON.parse(data);
+            if (Array.isArray(parsed)) {
+              console.log(`[NotificationService] Found ${parsed.length} items in storage key: ${key}`);
+              
+              // Filter for chef projet notifications specifically
+              const chefNotifications = parsed.filter((n: any) => 
+                n.type === 'TICKET_ASSIGNED' && 
+                (n.message?.includes('chef projet') || n.id?.includes('chef_'))
+              );
+              
+              if (chefNotifications.length > 0) {
+                console.log(`[NotificationService] Found ${chefNotifications.length} chef projet notifications in ${key}`);
+                
+                // For each chef projet notification, ensure it has the correct user ID
+                chefNotifications.forEach((n: any) => {
+                  if (n.userId !== currentUserId) {
+                    console.log(`[NotificationService] Fixing user ID on chef projet notification in ${key}`);
+                    n.userId = currentUserId;
+                  }
+                  
+                  // Add to our accumulated notifications array
+                  allNotifications.push(n);
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error(`[NotificationService] Error checking storage key ${key}:`, e);
+        }
+      });
+      
+      console.log(`[NotificationService] Emergency scan found ${allNotifications.length} chef projet notifications`);
+      
+      // If we found any chef projet notifications, merge them with existing ones
+      if (allNotifications.length > 0) {
+        // Get current notifications
+        const currentNotifications = this.notifications.value;
+        
+        // Get IDs of current notifications
+        const currentIds = currentNotifications.map(n => n.id);
+        
+        // Filter for new notifications
+        const newNotifications = allNotifications.filter(n => !currentIds.includes(n.id));
+        
+        if (newNotifications.length > 0) {
+          console.log(`[NotificationService] Adding ${newNotifications.length} new chef projet notifications from emergency scan`);
+          
+          // Format timestamps
+          const formattedNotifications = newNotifications.map(n => ({
+            ...n,
+            timestamp: new Date(n.timestamp)
+          }));
+          
+          // Combine with existing notifications
+          const updatedNotifications = [...formattedNotifications, ...currentNotifications];
+          
+          // Update notifications
+          this.notifications.next(updatedNotifications);
+          this.updateNotificationCount();
+          this.saveNotificationsToStorage();
+          
+          // Show a snackbar
+          this.showSnackbarNotification('Nouvelles notifications récupérées', 'Voir');
+        }
+      }
+    } catch (e) {
+      console.error('[NotificationService] Error in emergency notification scan:', e);
+    }
+  }
+
+  // Helper method to filter notifications for the current user
+  private filterNotificationsForCurrentUser(notifications: Notification[]): Notification[] {
+    const currentUserId = Number(localStorage.getItem('userId') || '0');
+    if (currentUserId === 0) return notifications;
+    
+    // Log notification statistics for debugging
+    const myNotifications = notifications.filter(n => n.userId === currentUserId);
+    const assignmentNotifications = notifications.filter(n => 
+      n.type === NotificationType.TICKET_ASSIGNED && 
+      n.userId === currentUserId);
+        
+    console.log(`[NotificationService] USERID CHECK: Found ${myNotifications.length} notifications for user ${currentUserId}, including ${assignmentNotifications.length} assignments`);
+    
+    // Log the chef projet assignment notifications specifically
+    const chefNotifications = notifications.filter(n => 
+      n.type === NotificationType.TICKET_ASSIGNED && 
+      n.userId === currentUserId && 
+      (n.message?.includes('chef projet') || n.message?.includes('Chef de projet') || n.id?.includes('chef_')));
+        
+    if (chefNotifications.length > 0) {
+      console.log(`[NotificationService] CHEF PROJET CHECK: Found ${chefNotifications.length} chef projet assignment notifications`);
+      chefNotifications.forEach(n => 
+        console.log(`[NotificationService] Chef notification: id=${n.id}, message="${n.message}"`));
+    } else {
+      console.log(`[NotificationService] No chef projet assignment notifications found for user ${currentUserId}`);
+    }
+    
+    // CRITICAL FIX: Return only notifications for the current user
+    // The bug was that we were logging the filtered notifications but returning all notifications
+    return myNotifications;
+  }
+
+  // CRITICAL FIX: Add special handling for older chef projet notification formats
+  private identifyOlderChefProjetNotifications(notifications: Notification[]): Notification[] {
+    try {
+      const currentUserId = Number(localStorage.getItem('userId') || '0');
+      if (currentUserId === 0) return notifications;
+      
+      console.log(`[NotificationService] Checking for older chef projet notification formats for user ${currentUserId}`);
+      
+      // Find any notifications with the old format text  
+      const updatedNotifications = [...notifications];
+      
+      // Look specifically for the exact format mentioned in the issue
+      for (let i = 0; i < updatedNotifications.length; i++) {
+        const n = updatedNotifications[i];
+        
+        // Check for the old format: "Votre ticket X a été assigné par le chef projet à un collaborateur"
+        if (n.type === NotificationType.TICKET_ASSIGNED && 
+            n.message && 
+            n.message.includes('Votre ticket') && 
+            n.message.includes('a été assigné par le chef projet')) {
+          
+          // If the notification doesn't have the chef_ prefix, update it
+          if (!n.id?.includes('chef_')) {
+            console.log(`[NotificationService] Found older chef projet notification format: ID=${n.id}, Message=${n.message}`);
+            
+            // Create a new ID with chef_ prefix for better detection
+            const newId = `chef_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            updatedNotifications[i] = {
+              ...n,
+              id: newId,
+              userId: currentUserId, // Ensure it's assigned to current user
+            };
+            
+            console.log(`[NotificationService] Updated older chef projet notification: ID=${updatedNotifications[i].id}`);
+          } else {
+            console.log(`[NotificationService] Found existing chef projet notification with proper ID: ${n.id}`);
+          }
+          
+          // Make sure the route is correct for the user role
+          const userRole = localStorage.getItem('userRole') || 'USER';
+          const ticketId = n.relatedId;
+          const route = userRole.toUpperCase() === 'USER' ? 
+            `/user/mes-tickets/${ticketId}` : 
+            `/client/tickets/${ticketId}`;
+          
+          if (n.route !== route) {
+            console.log(`[NotificationService] Fixing route for chef projet notification: ${n.route} -> ${route}`);
+            updatedNotifications[i].route = route;
+          }
+        }
+      }
+      
+      return updatedNotifications;
+    } catch (error) {
+      console.error('[NotificationService] Error identifying older chef projet notifications:', error);
+      return notifications;
+    }
+  }
+
+  // CRITICAL FIX: Force user ID check to ensure current user sees the notification
+  private forceUserIdMatch(notifications: Notification[]): Notification[] {
+    try {
+      const currentUserId = Number(localStorage.getItem('userId') || '0');
+      if (currentUserId === 0) return notifications;
+      
+      console.log(`[NotificationService] Force checking user ID matches for ${notifications.length} notifications`);
+      
+      // Update all notifications array
+      const updatedNotifications = [...notifications];
+      
+      // Loop through all notifications and update those that need userId fixes
+      for (let i = 0; i < updatedNotifications.length; i++) {
+        const n = updatedNotifications[i];
+        
+        // Fix chef projet assignment notifications
+        if (n.type === NotificationType.TICKET_ASSIGNED && 
+            (n.message?.includes('par le chef projet') || 
+             n.message?.includes('votre ticket') || 
+             n.id?.includes('chef_'))) {
+          
+          if (n.userId !== currentUserId) {
+            console.log(`[NotificationService] CRITICAL: Fixing user ID mismatch on chef projet notification: ${n.id}`);
+            updatedNotifications[i] = {...n, userId: currentUserId};
+          }
+        }
+        
+        // Fix notifications related to ticket status changes
+        if (n.type === NotificationType.TICKET_STATUS_CHANGED) {
+          if (n.userId !== currentUserId) {
+            console.log(`[NotificationService] CRITICAL: Fixing user ID mismatch on status change notification: ${n.id}`);
+            updatedNotifications[i] = {...n, userId: currentUserId};
+          }
+        }
+        
+        // Add userId to notifications that don't have one
+        if (n.userId === undefined || n.userId === null) {
+          console.log(`[NotificationService] CRITICAL: Adding missing user ID to notification: ${n.id}`);
+          updatedNotifications[i] = {...n, userId: currentUserId};
+        }
+      }
+      
+      return updatedNotifications;
+    } catch (error) {
+      console.error('[NotificationService] Error in forceUserIdMatch:', error);
+      return notifications;
+    }
+  }
+
+  // Add method to display debug info for ticket assignment notifications
+  private displayAssignmentNotificationDebugInfo(notifications: Notification[]): void {
+    const assignmentNotifications = notifications.filter(
+      n => n.type === NotificationType.TICKET_ASSIGNED
+    );
+    
+    if (assignmentNotifications.length > 0) {
+      console.log(`[NotificationService][Assignment] Found ${assignmentNotifications.length} assignment notifications:`);
+      assignmentNotifications.forEach(n => {
+        console.log(`[NotificationService][Assignment] - Ticket ID: ${n.relatedId}, User ID: ${n.userId}, Message: ${n.message}`);
+      });
+    } else {
+      console.log('[NotificationService][Assignment] No assignment notifications found');
+    }
+  }
+
+  // Setup a controlled periodic refresh with reasonable intervals
+  private setupControlledPeriodicRefresh(): void {
+    // Use a reasonable interval (2 minutes = 120000ms) to avoid excessive refreshes
+    const refreshInterval = 120000;
+    
+    console.log(`[NotificationService] Setting up controlled refresh every ${refreshInterval/1000} seconds`);
+    
+    // Initial refresh after a short delay
+    setTimeout(() => {
+      console.log('[NotificationService] Running initial controlled refresh');
+      this.lastRefreshTime = Date.now(); // Update the refresh time
+      
+      // Don't refresh if clearing was just performed
+      if (!this.preventRefetchAfterClear) {
+        this.fetchNotificationsFromApi().subscribe(); // Fetch from API rather than just local storage
+      }
+      
+      // Then set up recurring refresh
+      setInterval(() => {
+        // Only log once per refresh to reduce spam
+        console.log('[NotificationService] Running periodic controlled refresh');
+        this.lastRefreshTime = Date.now(); // Update the refresh time
+        
+        // Don't refresh if clearing was just performed
+        if (!this.preventRefetchAfterClear) {
+          this.fetchNotificationsFromApi().subscribe(); // Fetch from API rather than just local storage
+        } else {
+          console.log('[NotificationService] Periodic refresh skipped - notifications were just cleared or marked as read');
+        }
+      }, refreshInterval);
+    }, 5000);
+  }
+
+  // Add this new method after the displayAssignmentNotificationDebugInfo method
+  private enhanceResolutionNotifications(notifications: Notification[]): Notification[] {
+    // Find all resolution-related notifications
+    const resolutionNotifications = notifications.filter(n => {
+      // Direct resolution notification types
+      if (n.type === NotificationType.TICKET_RESOLVED || 
+          n.type === NotificationType.TICKET_UNRESOLVED) {
+        return true;
+      }
+      
+      // IMPROVED: Always treat TICKET_STATUS_CHANGED as important resolution notifications
+      // regardless of message content, as status changes are important to track
+      if (n.type === NotificationType.TICKET_STATUS_CHANGED) {
+        return true;
+      }
+      
+      // Also check message content for resolution terms
+      if (n.message) {
+        const lowerMsg = n.message.toLowerCase();
+        if (lowerMsg.includes('résolu') || 
+            lowerMsg.includes('resolu') ||
+            lowerMsg.includes('non résolu') || 
+            lowerMsg.includes('non resolu')) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+    
+    console.log(`[NotificationService] Found ${resolutionNotifications.length} resolution notifications to enhance`);
+    
+    // Enhance each resolution notification
+    resolutionNotifications.forEach(notification => {
+      // Add a special property for UI handling
+      (notification as any).isResolutionNotification = true;
+      
+      // Make sure it has the correct icon
+      if (notification.type === NotificationType.TICKET_RESOLVED) {
+        notification.icon = 'done_all';
+      } else if (notification.type === NotificationType.TICKET_UNRESOLVED) {
+        notification.icon = 'replay';
+        // Add special property for unresolution
+        (notification as any).isUnresolutionNotification = true;
+      } else if (notification.type === NotificationType.TICKET_STATUS_CHANGED) {
+        // For status changes, check the message content
+        const lowerMsg = notification.message?.toLowerCase() || '';
+        
+        if (lowerMsg.includes('non résolu') || lowerMsg.includes('non resolu')) {
+          notification.icon = 'replay';
+          // Add special property for unresolution
+          (notification as any).isUnresolutionNotification = true;
+          // Add comment if missing
+          notification.comment = notification.comment || 'Ce ticket nécessite encore du travail';
+        } else if (lowerMsg.includes('résolu') || lowerMsg.includes('resolu')) {
+          notification.icon = 'done_all';
+          // Add comment if missing
+          notification.comment = notification.comment || 'Ce ticket a été résolu avec succès';
+        } else if (lowerMsg.includes('accepted') || lowerMsg.includes('accepté')) {
+          // Map ACCEPTED status to an appropriate icon
+          notification.icon = 'assignment_turned_in';
+          // Add comment about the meaning
+          notification.comment = notification.comment || 'Ce ticket a été accepté et est en cours de traitement';
+        } else {
+          // Default icon for status changes
+          notification.icon = 'update';
+        }
+      }
+
+      // Ensure it has a proper route for navigation
+      if (notification.relatedId && !notification.route) {
+        notification.route = this.getDefaultRouteForType(
+          notification.type, 
+          notification.relatedId
+        );
+      }
+      
+      // Add a comment about the resolution importance if not already present
+      if (!notification.comment) {
+        if (notification.type === NotificationType.TICKET_RESOLVED || 
+            (notification.message && 
+             notification.message.toLowerCase().includes('résolu') &&
+             !notification.message.toLowerCase().includes('non résolu'))) {
+          notification.comment = 'Ticket résolu avec succès';
+        } else if (notification.type === NotificationType.TICKET_UNRESOLVED ||
+                  (notification.message && 
+                   notification.message.toLowerCase().includes('non résolu'))) {
+          notification.comment = 'Le ticket nécessite encore du travail';
+        } else if (notification.message && 
+                  (notification.message.toLowerCase().includes('accepted') ||
+                   notification.message.toLowerCase().includes('accepté'))) {
+          notification.comment = 'Ce ticket a été accepté et est en cours de traitement';
+        } else {
+          notification.comment = 'Changement de statut important du ticket';
+        }
+      }
+    });
+    
+    return notifications;
+  }
+
+  // Update the fetchNotificationsFromApi method to use the new enhanceResolutionNotifications method
+  private fetchNotificationsFromApi(): Observable<any> {
+    const userId = Number(localStorage.getItem('userId') || '0');
+    if (userId === 0) {
+      console.log('[NotificationService] No user ID found, skipping API call');
+      return of([]);
+    }
+    
+    console.log(`[NotificationService] Fetching notifications from API for user ${userId}`);
+    
+    // Updated URL to match the format shown in the logs
+    return this.http.get<ApiNotification[]>(`${this.apiUrl}/user/${userId}`)
+      .pipe(
+        tap(apiNotifications => {
+          console.log(`[NotificationService] Received ${apiNotifications.length} notifications from API`);
+          
+          // Add more detailed logging about received notifications
+          if (apiNotifications.length > 0) {
+            console.log('[NotificationService] API notification sample:', apiNotifications[0]);
+            
+            // Count by type
+            const typeCount: Record<string, number> = {};
+            apiNotifications.forEach(n => {
+              typeCount[n.type] = (typeCount[n.type] || 0) + 1;
+            });
+            console.log('[NotificationService] API notifications by type:', typeCount);
+          }
+          
+          // Process and transform API notifications to match our frontend format
+          const processedNotifications = apiNotifications.map(apiNotification => ({
+            id: apiNotification.id.toString(),
+            message: apiNotification.message,
+            type: apiNotification.type as NotificationType,
+            timestamp: new Date(apiNotification.createdAt),
+            isRead: apiNotification.isRead,
+            relatedId: apiNotification.relatedTicketId,
+            route: apiNotification.route || this.getDefaultRouteForType(apiNotification.type, apiNotification.relatedTicketId),
+            userId: apiNotification.userId
+          }));
+          
+          // ENHANCED: Process resolution notifications specifically
+          const enhancedNotifications = this.enhanceResolutionNotifications(processedNotifications);
+          
+          // CRITICAL FIX: Check specifically for resolution notifications 
+          const resolutionNotifications = enhancedNotifications.filter(
+            n => n.type === NotificationType.TICKET_RESOLVED || 
+                 n.type === NotificationType.TICKET_UNRESOLVED ||
+                 n.type === NotificationType.TICKET_STATUS_CHANGED
+          );
+          
+          if (resolutionNotifications.length > 0) {
+            console.log(`[NotificationService] Found ${resolutionNotifications.length} ticket resolution/status notifications among API results`);
+            
+            // Log details of resolution notifications
+            resolutionNotifications.forEach(n => {
+              console.log(`[NotificationService] Resolution notification: ID=${n.id}, Type=${n.type}, Message="${n.message}"`);
+            });
+          }
+          
+          // Merge with existing notifications
+          this.mergeNotifications(enhancedNotifications);
+        }),
+        catchError(error => {
+          console.error('[NotificationService] Error fetching notifications from API', error);
+          return of([]);
+        })
+      );
+  }
+  
+  // Helper to get default route for a notification
+  private getDefaultRouteForType(type: string, ticketId?: number): string {
+    const userRole = localStorage.getItem('userRole') || 'USER';
+    
+    if (ticketId) {
+      // ENHANCED: Special handling for resolution notifications
+      if (type === NotificationType.TICKET_RESOLVED || 
+          type === NotificationType.TICKET_UNRESOLVED ||
+          (type === NotificationType.TICKET_STATUS_CHANGED && ticketId)) {
+        
+        if (userRole === 'USER' || userRole === 'CLIENT') {
+          return `/user/mes-tickets/${ticketId}`;
+        } else if (userRole === 'COLLABORATEUR') {
+          return `/collaborateur/tickets/${ticketId}`;
+        } else if (userRole === 'CHEF_PROJET') {
+          return `/chef-projet/tickets/${ticketId}`;
+        }
+      }
+      
+      // Normal route handling for other notification types
+      if (userRole === 'USER' || userRole === 'CLIENT') {
+        return `/user/mes-tickets/${ticketId}`;
+      } else if (userRole === 'COLLABORATEUR') {
+        return `/collaborateur/tickets/${ticketId}`;
+      } else if (userRole === 'CHEF_PROJET') {
+        return `/chef-projet/tickets/${ticketId}`;
+      }
+    }
+    
+    return '/';
+  }
+  
+  // Merge new notifications with existing ones
+  private mergeNotifications(newNotifications: Notification[]): void {
+    const currentNotifications = this.notifications.value;
+    const currentIds = new Set(currentNotifications.map(n => n.id));
+    
+    // Filter for truly new notifications
+    const uniqueNewNotifications = newNotifications.filter(n => !currentIds.has(n.id));
+    
+    if (uniqueNewNotifications.length > 0) {
+      console.log(`[NotificationService] Merging ${uniqueNewNotifications.length} new notifications`);
+      
+      // Special handling for resolution notifications
+      const resolutionNotifications = uniqueNewNotifications.filter(
+        n => n.type === NotificationType.TICKET_RESOLVED || 
+             n.type === NotificationType.TICKET_UNRESOLVED || 
+             (n.type === NotificationType.TICKET_STATUS_CHANGED && 
+              (n.message?.includes('résolu') || n.message?.includes('Résolu')))
+      );
+      
+      if (resolutionNotifications.length > 0) {
+        console.log(`[NotificationService] Found ${resolutionNotifications.length} important resolution/status notifications`);
+        
+        // ENHANCED: Handle each resolution notification individually for better visibility
+        resolutionNotifications.forEach(notification => {
+          // Check if it's a resolution notification
+          const isResolutionNotif = notification.type === NotificationType.TICKET_RESOLVED || 
+                                   notification.type === NotificationType.TICKET_UNRESOLVED ||
+                                   (notification.message?.includes('résolu') || notification.message?.includes('Résolu'));
+                                   
+          if (isResolutionNotif) {
+            // Force as unread for better visibility
+            notification.isRead = false;
+            
+            // Mark with special ID prefix if not already present
+            if (!notification.id.includes('resolution_')) {
+              notification.id = `resolution_${notification.id}`;
+            }
+            
+            // Show notification prominently
+            this.showSnackbarNotification(notification.message, 'Voir Ticket');
+            console.log(`[NotificationService] Highlighted resolution notification: "${notification.message}"`);
+          }
+        });
+      }
+      
+      // Combine with existing notifications
+      const mergedNotifications = [...uniqueNewNotifications, ...currentNotifications];
+      
+      // Update notifications
+      this.notifications.next(mergedNotifications);
+      this.updateNotificationCount();
+      this.saveNotificationsToStorage();
+      
+      // Show notification if there are new ones and we haven't shown individual resolution notifications
+      if (uniqueNewNotifications.length > resolutionNotifications.length) {
+        const remainingCount = uniqueNewNotifications.length - resolutionNotifications.length;
+        if (remainingCount > 0) {
+          this.showSnackbarNotification(`${remainingCount} nouvelles notifications`, 'Voir');
+        }
+      }
+    }
+  }
+
+  // Add a method to create a test resolution notification for debugging
+  public createTestResolutionNotification(): void {
+    console.log('[NotificationService] Creating test resolution notification');
+    
+    const userId = Number(localStorage.getItem('userId') || '0');
+    if (userId === 0) {
+      console.error('[NotificationService] Cannot create test notification - no user ID found');
+      return;
+    }
+    
+    // Create a test notification
+    const testNotification = {
+      id: `test_resolution_${Date.now()}`,
+      message: 'Votre ticket "e r re er" a été marqué comme résolu',
+      type: NotificationType.TICKET_RESOLVED,
+      timestamp: new Date(),
+      isRead: false,
+      relatedId: 55, // Use an existing ticket ID
+      route: '/user/mes-tickets/55',
+      userId,
+      // Add special properties for highlighting
+      icon: 'done_all',
+      comment: 'Ce ticket a été résolu avec succès (notification de test)'
+    };
+    
+    // Add special flag for resolution
+    (testNotification as any).isResolutionNotification = true;
+    
+    // Add to notifications
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([testNotification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Show snackbar
+    this.showSnackbarNotification('Notification de test créée: ' + testNotification.message, 'Voir Ticket');
+    
+    console.log('[NotificationService] Test resolution notification created:', testNotification);
+  }
+
+  // Add a method to create resolution notifications from status changes
+  public createResolutionFromStatusChange(
+    ticketTitle: string,
+    ticketId: number,
+    previousStatus: string,
+    newStatus: string,
+    userId: number
+  ): void {
+    console.log(`[NotificationService] Creating resolution notification from status change: ${previousStatus} -> ${newStatus}`);
+    
+    // Create appropriate message based on the new status
+    let message = '';
+    let type = NotificationType.TICKET_STATUS_CHANGED;
+    let icon = 'update';
+    let comment = '';
+    
+    // Set message and type based on the new status
+    if (newStatus.toLowerCase().includes('résolu') || 
+        newStatus.toLowerCase() === 'resolved' || 
+        newStatus.toLowerCase() === 'done' || 
+        newStatus.toLowerCase() === 'completed') {
+      
+      message = `Votre ticket "${ticketTitle}" a été marqué comme Résolu`;
+      type = NotificationType.TICKET_RESOLVED;
+      icon = 'done_all';
+      comment = 'Ce ticket a été résolu avec succès';
+      
+    } else if (newStatus.toLowerCase() === 'accepted' || 
+              newStatus.toLowerCase() === 'accepté' || 
+              newStatus.toLowerCase() === 'en cours') {
+      
+      message = `Votre ticket "${ticketTitle}" a été accepté et est en cours de traitement`;
+      type = NotificationType.TICKET_ACCEPTED;
+      icon = 'assignment_turned_in';
+      comment = 'Ce ticket a été accepté et est en cours de traitement';
+      
+    } else {
+      // Generic status change message
+      message = `Le statut de votre ticket "${ticketTitle}" a changé de "${previousStatus}" à "${newStatus}"`;
+      icon = 'update';
+      comment = 'Le statut de votre ticket a été mis à jour';
+    }
+    
+    // Create a unique ID that indicates this is a resolution notification
+    const uniqueId = `resolution_status_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create the notification object
+    const notification: Notification = {
+      id: uniqueId,
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type,
+      relatedId: ticketId,
+      userId,
+      timestamp: new Date(),
+      isRead: false,
+      icon,
+      comment
+    };
+    
+    // Add special flag for resolution identification
+    (notification as any).isResolutionNotification = true;
+    
+    // Add to notifications collection
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([notification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Also show a snackbar
+    this.showSnackbarNotification(message, 'Voir Ticket');
+    
+    console.log(`[NotificationService] Created resolution notification from status change: ${notification.id}`);
+  }
+
+  // Create a test unresolved notification for debugging purposes
+  public createTestUnresolvedNotification(): void {
+    console.log('[NotificationService] Creating test unresolved notification');
+    
+    // Get user ID from local storage
+    const userId = Number(localStorage.getItem('userId') || '0');
+    
+    // Create a unique ID for this test notification
+    const uniqueId = `test_unresolved_${Date.now()}`;
+    
+    // Create a test ticket title
+    const ticketTitle = 'Ticket de test non résolu';
+    
+    // Create the notification object with proper type and formatting
+    const notification: Notification = {
+      id: uniqueId,
+      message: `Votre ticket "${ticketTitle}" a été marqué comme non résolu`,
+      type: NotificationType.TICKET_UNRESOLVED,
+      timestamp: new Date(),
+      isRead: false,
+      userId,
+      route: '/user/mes-tickets/55', // Use a valid ticket ID
+      relatedId: 55, // Same ticket ID
+      icon: 'replay', // Icon for unresolved
+      comment: 'Ce ticket nécessite encore du travail'
+    };
+    
+    // Add special property for UI handling
+    (notification as any).isResolutionNotification = true;
+    (notification as any).isUnresolutionNotification = true;
+    
+    // Add to notifications
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([notification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Show a snackbar notification
+    this.showSnackbarNotification(notification.message, 'Voir Ticket');
+    
+    console.log('[NotificationService] Created test unresolved notification:', notification);
+  }
+  
+  // Create an unresolved notification from a status change
+  public createUnresolvedFromStatusChange(
+    ticketTitle: string,
+    ticketId: number,
+    previousStatus: string,
+    userId: number
+  ): void {
+    console.log(`[NotificationService] Creating unresolved notification from status change: ${previousStatus} -> Non résolu`);
+    
+    // Create appropriate message
+    const message = `Votre ticket "${ticketTitle}" a été marqué comme non résolu`;
+    const type = NotificationType.TICKET_UNRESOLVED;
+    const icon = 'replay';
+    const comment = 'Ce ticket nécessite encore du travail';
+    
+    // Create a unique ID that indicates this is an unresolved notification
+    const uniqueId = `unresolved_status_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create the notification object
+    const notification: Notification = {
+      id: uniqueId,
+      message,
+      route: `/user/mes-tickets/${ticketId}`,
+      type,
+      relatedId: ticketId,
+      userId,
+      timestamp: new Date(),
+      isRead: false,
+      icon,
+      comment
+    };
+    
+    // Add special flags for identification
+    (notification as any).isResolutionNotification = true;
+    (notification as any).isUnresolutionNotification = true;
+    
+    // Add to notifications collection
+    const currentNotifications = this.notifications.value;
+    this.notifications.next([notification, ...currentNotifications]);
+    this.updateNotificationCount();
+    this.saveNotificationsToStorage();
+    
+    // Also show a snackbar
+    this.showSnackbarNotification(message, 'Voir Ticket');
+    
+    console.log(`[NotificationService] Created unresolved notification from status change: ${notification.id}`);
+  }
+}

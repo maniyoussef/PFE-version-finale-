@@ -1,0 +1,39 @@
+<div class="admin-dashboard-container">
+  <div class="particle-background"></div>
+
+  <!-- Main Content Area -->
+  <main class="admin-main-content">
+    <div class="dashboard-container">
+      <h1 class="dashboard-title">{{ title }}</h1>
+
+      <div class="dashboard-grid">
+        <div
+          class="dashboard-card"
+          *ngFor="let card of dashboardCards; let i = index"
+          [attr.data-index]="i"
+        >
+          <div class="card-badge">{{ i + 1 }}</div>
+          <div class="card-light"></div>
+          <div class="card-header">
+            <div class="icon-container">
+              <mat-icon>{{ card.icon }}</mat-icon>
+            </div>
+            <h2>{{ card.title }}</h2>
+          </div>
+          <div class="card-action">
+            <button
+              class="action-button"
+              [ngClass]="{ 'debug-button': card.color === 'warn' }"
+              [routerLink]="card.route"
+            >
+              <span class="button-text">{{ card.buttonText }}</span>
+              <span class="button-icon">
+                <mat-icon>arrow_forward</mat-icon>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

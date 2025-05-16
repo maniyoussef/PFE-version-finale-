@@ -1,0 +1,118 @@
+<div class="dialog-container">
+  <h2 class="dialog-title slide-in">
+    {{ data.isEdit ? "Modifier l'Utilisateur" : "Créer un Nouvel Utilisateur" }}
+  </h2>
+
+  <div *ngIf="isLoading" class="spinner-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <div *ngIf="!isLoading" class="form-container">
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+      <div class="slide-in" style="animation-delay: 0.05s">
+        <div class="form-group">
+          <label for="nameInput">Prénom</label>
+          <input
+            id="nameInput"
+            type="text"
+            class="form-control"
+            formControlName="name"
+            placeholder="Entrer le prénom"
+            required
+          />
+          <div class="error-message" *ngIf="userForm.controls['name'].invalid && userForm.controls['name'].touched">
+            Le prénom est requis
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-in" style="animation-delay: 0.1s">
+        <div class="form-group">
+          <label for="lastNameInput">Nom</label>
+          <input
+            id="lastNameInput"
+            type="text"
+            class="form-control"
+            formControlName="lastName"
+            placeholder="Entrer le nom"
+            required
+          />
+          <div class="error-message" *ngIf="userForm.controls['lastName'].invalid && userForm.controls['lastName'].touched">
+            Le nom est requis
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-in" style="animation-delay: 0.15s">
+        <div class="form-group">
+          <label for="emailInput">Email</label>
+          <input
+            id="emailInput"
+            type="email"
+            class="form-control"
+            formControlName="email"
+            placeholder="Entrer l'email"
+            required
+          />
+          <div class="error-message" *ngIf="userForm.controls['email'].invalid && userForm.controls['email'].touched">
+            <span *ngIf="userForm.controls['email'].hasError('required')">L'email est requis</span>
+            <span *ngIf="userForm.controls['email'].hasError('email')">Veuillez entrer une adresse email valide</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Country Dropdown -->
+      <div class="slide-in" style="animation-delay: 0.2s">
+        <div class="form-group">
+          <label for="countrySelect">Pays</label>
+          <select id="countrySelect" 
+            class="form-control"
+            formControlName="countryId">
+            <option [value]="null" disabled>Sélectionner un pays</option>
+            <option *ngFor="let country of countries" [value]="country.id">
+              {{ country.name }}
+            </option>
+          </select>
+          <div class="error-message" *ngIf="userForm.controls['countryId'].invalid && userForm.controls['countryId'].touched">
+            Le pays est requis
+          </div>
+        </div>
+      </div>
+
+      <!-- Role Dropdown -->
+      <div class="slide-in" style="animation-delay: 0.25s">
+        <div class="form-group">
+          <label for="roleSelect">Rôle</label>
+          <select id="roleSelect" 
+            class="form-control"
+            formControlName="roleId">
+            <option [value]="null" disabled>Sélectionner un rôle</option>
+            <option *ngFor="let role of roles" [value]="role.id">
+              {{ role.name }}
+            </option>
+          </select>
+          <div class="error-message" *ngIf="userForm.controls['roleId'].invalid && userForm.controls['roleId'].touched">
+            Le rôle est requis
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-actions slide-in" style="animation-delay: 0.3s">
+        <button
+          type="button"
+          class="cancel-button"
+          (click)="onCancel()"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="submit-button"
+          [disabled]="userForm.invalid"
+        >
+          {{ data.isEdit ? "Mettre à jour" : "Créer" }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

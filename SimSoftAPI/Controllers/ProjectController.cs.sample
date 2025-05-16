@@ -1,0 +1,73 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+
+namespace SimSoftAPI.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ProjectController : ControllerBase
+    {
+        private readonly SimSoftContext _context;
+        private readonly ILogger<ProjectController> _logger;
+
+        public ProjectController(SimSoftContext context, ILogger<ProjectController> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Check if a project can be safely deleted (no associated tickets)
+        /// </summary>
+        /// <param name="id">Project ID to check</param>
+        /// <returns>Result with canDelete flag and list of dependencies if any</returns>
+        [HttpGet("{id}/can-delete")]
+        public async Task<IActionResult> CanDeleteProject(int id)
+        {
+            try
+            {
+                var project = await _context.Projects.FindAsync(id);
+                if (project == null) 
+                    return NotFound(new { 
+                        canDelete = false, 
+                        message = "Project not found" 
+                    });
+
+                // Check for associated tickets
+                var associatedTickets = await _context.Tickets
+                    .Where(t => t.ProjectId == id)
+                    .Select(t => new { 
+                        t.Id, 
+                        t.Title,
+                        t.Status 
+                    })
+                    .ToListAsync();
+
+                bool canDelete = !associatedTickets.Any();
+                
+                // Return result with detailed information
+                return Ok(new { 
+                    canDelete = canDelete,
+                    message = canDelete 
+                        ? "Project can be safely deleted" 
+                        : "Project has associated tickets that prevent deletion",
+                    dependencies = associatedTickets.Select(t => $"Ticket #{t.Id}: {t.Title} ({t.Status})").ToList(),
+                    dependencyCount = associatedTickets.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error checking if project can be deleted: {Message}", ex.Message);
+                return StatusCode(500, new { 
+                    canDelete = false, 
+                    message = "Error checking project dependencies",
+                    error = ex.Message
+                });
+            }
+        }
+    }
+} 

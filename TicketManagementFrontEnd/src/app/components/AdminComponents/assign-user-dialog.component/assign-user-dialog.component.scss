@@ -1,0 +1,165 @@
+.full-width {
+  width: 100%;
+}
+
+// Style for the select element to match Material Design
+.form-group {
+  margin-bottom: 16px;
+  
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+    background-color: white;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    
+    &:focus {
+      outline: none;
+      border-color: #1976d2;
+      box-shadow: 0 0 0 1px #1976d2;
+    }
+    
+    &:hover:not(:focus) {
+      border-color: rgba(0, 0, 0, 0.42);
+    }
+    
+    option {
+      padding: 8px;
+    }
+  }
+}
+
+// Error message styling
+.error-message {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #fdecea;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  color: #721c24;
+  animation: fadeIn 0.3s ease-out;
+  
+  p {
+    margin: 0 0 8px 0;
+    
+    &:last-child {
+      margin-bottom: 0;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+  }
+}
+
+// Empty state styling
+.empty-state {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  color: #495057;
+  text-align: center;
+  
+  p {
+    margin: 0;
+  }
+}
+
+// Loading state styling
+.loading-state {
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  p {
+    margin-top: 16px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #1976d2;
+    animation: spin 1s infinite linear;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Animation for the dialog
+:host {
+  display: block;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Custom dialog styling
+::ng-deep .custom-dialog {
+  .mat-mdc-dialog-container {
+    padding: 0;
+  }
+  
+  .mat-mdc-dialog-surface {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+}
+
+// Make the dialog header look nice
+[mat-dialog-title] {
+  margin: 0 !important;
+  padding: 16px 24px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 18px !important;
+  font-weight: 500 !important;
+}
+
+// Style dialog content
+mat-dialog-content {
+  padding: 24px !important;
+  max-height: 60vh;
+}
+
+// Style dialog actions
+mat-dialog-actions {
+  padding: 8px 24px !important;
+  margin-bottom: 0;
+  border-top: 1px solid #e0e0e0;
+  
+  button {
+    margin-left: 8px;
+    
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+}

@@ -1,0 +1,30 @@
+<div class="confirm-dialog scale-in">
+  <div class="dialog-title">
+    <mat-icon class="icon">warning</mat-icon>
+    {{ data.title }}
+  </div>
+
+  <div class="dialog-content">
+    {{ data.message }}
+  </div>
+
+  <div class="dialog-actions">
+    <button
+      mat-button
+      type="button"
+      class="cancel-button"
+      (click)="dialogRef.close(false)"
+    >
+      {{ data.cancelText || "Cancel" }}
+    </button>
+
+    <button
+      mat-raised-button
+      type="button"
+      class="confirm-button"
+      (click)="dialogRef.close(true)"
+    >
+      {{ data.confirmText || "Confirm" }}
+    </button>
+  </div>
+</div>

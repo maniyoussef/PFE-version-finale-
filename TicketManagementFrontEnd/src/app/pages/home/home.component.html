@@ -1,0 +1,217 @@
+<!-- src/app/pages/home/home.component.html -->
+<div class="home-container">
+  <!-- Animated Progress Bar -->
+  <div class="progress-bar" [style.width.%]="scrollProgress"></div>
+
+  <!-- Modern Navbar -->
+  <nav class="navbar" [class.scrolled]="!isHeroVisible">
+    <div class="logo">
+      <span>SIM</span><span class="accent">SOFT</span>
+    </div>
+    <div class="nav-links">
+      <a href="https://www.simsoft.com.tn/divalto/qui-sommes-nous/" target="_blank">Qui sommes nous?</a>
+      <a href="https://www.simsoft.com.tn/" target="_blank">Services</a>
+      <a href="https://www.simsoft.com.tn/contact-partenaires/contact-simsoft-2/" target="_blank">Contact</a>
+      <button mat-flat-button class="login-button" (click)="login()">
+        <mat-icon>login</mat-icon>
+        <span>Login</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero Section with White Background -->
+  <section class="hero-section" [class.visible]="isHeroVisible">
+    <!-- Animated Shapes -->
+    <div class="animated-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+      <div class="shape shape-4"></div>
+      <div class="shape shape-5"></div>
+      <div class="shape shape-6"></div>
+    </div>
+    
+    <!-- Animated Dots Grid -->
+    <div class="dots-grid"></div>
+    
+    <!-- Hero Content -->
+    <div class="content" @fadeInUp>
+      <div class="hero-text">
+        <h1 class="animated-title">SIMSOFT</h1>
+        <h2 class="tagline">Technology at Your Service</h2>
+        <div class="typing-container">
+          <p class="typed-text">
+            Innovez, Transformez, Excellez - Votre partenaire technologique de confiance
+            pour des solutions d'entreprise sur mesure.
+          </p>
+        </div>
+        <div class="divider"></div>
+        <p class="subtitle reveal-text">
+          Ce site est dédié à la gestion des tickets techniques - Pour découvrir nos services complets:
+        </p>
+      </div>
+      
+      <div class="button-group">
+        <a mat-flat-button class="discover-button" 
+           href="https://www.simsoft.com.tn/" 
+           target="_blank" 
+           rel="noopener">
+          <mat-icon class="rocket-icon">rocket_launch</mat-icon>
+          <span>Découvrir Nos Solutions</span>
+        </a>
+        <button mat-flat-button class="login-button-hero" (click)="login()">
+          <mat-icon>login</mat-icon>
+          <span>Accéder à mon espace</span>
+        </button>
+      </div>
+      
+      <!-- Scroll Indicator moved to after button group -->
+      <div class="scroll-indicator-container">
+        <div class="scroll-indicator">
+          <div class="mouse">
+            <div class="wheel"></div>
+          </div>
+          <div class="arrow">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section with Modern Card Design -->
+  <section class="about-section">
+    <div class="content" @fadeInUp>
+      <div class="section-header">
+        <h2 class="animated-heading">Notre Histoire</h2>
+        <div class="section-underline"></div>
+      </div>
+      
+      <div class="about-card">
+        <div class="card-content">
+          <div class="animated-paragraph">
+            <p>
+              Depuis notre création en 2000 par l'ingénieur visionnaire <strong>SRIHI HATEM</strong>, 
+              SIMSOFT s'est imposé comme un leader dans l'intégration des systèmes d'information 
+              et le développement de solutions B2B innovantes.
+            </p>
+          </div>
+          <div class="animated-paragraph" style="animation-delay: 0.3s;">
+            <p>
+              Notre holding, comprenant <strong>SIMSOFT TECHNOLOGY</strong> et <strong>SIMSOFT INTERNATIONALE</strong>, 
+              offre des solutions clés en main qui redéfinissent les standards de l'industrie.
+            </p>
+          </div>
+        </div>
+        <div class="about-stats">
+          <div class="stat animate-in">
+            <div class="stat-number counter" data-target="23">0</div>
+            <div class="stat-label">Années d'Expertise</div>
+          </div>
+          <div class="stat animate-in" style="animation-delay: 0.2s;">
+            <div class="stat-number counter" data-target="500">0</div>
+            <div class="stat-label">Projets Réussis</div>
+          </div>
+          <div class="stat animate-in" style="animation-delay: 0.4s;">
+            <div class="stat-number counter" data-target="100">0</div>
+            <div class="stat-label">Professionnels</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Products Section with Enhanced Card Design -->
+  <section class="products-section">
+    <div class="content">
+      <div class="section-header">
+        <h2 class="animated-heading">Nos Solutions Innovantes</h2>
+        <div class="section-underline"></div>
+      </div>
+      
+      <div class="products-grid">
+        <div class="product-card" *ngFor="let product of products; let i = index"
+             #productCard
+             [class.expanded]="expandedProductIndex === i"
+             (click)="toggleProductExpansion(i)">
+          
+          <div class="card-content">
+            <div class="card-header">
+              <div class="product-icon" [style.background-color]="product.color + '22'" [style.border-color]="product.color">
+                <mat-icon [style.color]="product.color">{{ product.icon }}</mat-icon>
+              </div>
+              <h3>{{ product.name }}</h3>
+            </div>
+            
+            <p class="product-description">{{ product.description }}</p>
+            
+            <div class="card-arrow" [@rotate]="expandedProductIndex === i ? 'rotated' : 'default'">
+              <mat-icon>expand_more</mat-icon>
+            </div>
+          </div>
+          
+          <div class="product-details" [@expandCollapse]="expandedProductIndex === i ? 'expanded' : 'collapsed'">
+            <div class="details-content">
+              <p class="long-description">{{ product.longDescription }}</p>
+              
+              <div class="product-stats">
+                <div class="stat" *ngFor="let stat of product.stats | keyvalue">
+                  <div class="stat-value">{{ stat.value }}</div>
+                  <div class="stat-label">{{ stat.key }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact CTA Section -->
+  <section class="cta-section">
+    <div class="content" @fadeInUp>
+      <div class="cta-text">
+        <h2 class="animated-heading">Besoin d'aide avec vos tickets?</h2>
+        <p class="reveal-text">Accédez à votre espace client pour créer et suivre vos tickets de support.</p>
+      </div>
+      <button mat-flat-button class="cta-button pulse-animation" (click)="login()">
+        <mat-icon>login</mat-icon>
+        <span>Accéder à mon espace</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Modern Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-logo">
+        <div class="logo">
+          <span>SIM</span><span class="accent">SOFT</span>
+        </div>
+        <p>Solutions technologiques innovantes pour entreprises</p>
+      </div>
+      
+      <div class="footer-links">
+        <div class="link-group">
+          <h4>Contact</h4>
+          <a href="tel:+21671123456">+216 73 21 36 88</a>
+          <a href="mailto:commercial@simsoft.com.tn">commercial@simsoft.com.tn</a>
+          <a href="https://goo.gl/maps/AnyMapLink" target="_blank">Sousse, Tunisie</a>
+        </div>
+        
+        <div class="link-group">
+          <h4>Réseaux Sociaux</h4>
+          <a href="https://www.linkedin.com/company/simsoft.tn/" target="_blank">LinkedIn</a>
+          <a href="https://x.com/simsoft_tn" target="_blank">Twitter (X)</a>
+          <a href="https://www.instagram.com/simsofttechnology" target="_blank">Instagram</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer-bottom">
+      <p>&copy; {{ currentYear }} SIMSOFT Technology. Tous droits réservés.</p>
+    </div>
+  </footer>
+</div>

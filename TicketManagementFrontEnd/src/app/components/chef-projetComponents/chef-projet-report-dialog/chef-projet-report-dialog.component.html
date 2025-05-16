@@ -1,0 +1,88 @@
+<div class="report-dialog">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>Rapport de Ticket #{{ ticket.id }}</h2>
+    <button mat-icon-button class="close-button" (click)="closeDialog()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <div class="ticket-meta">
+      <div class="ticket-title">
+        <h3>{{ ticket.title }}</h3>
+        <div class="ticket-badges">
+          <span class="status-badge" [ngClass]="'status-' + (ticket.status ? ticket.status.toLowerCase().replace(' ', '-') : '')">
+            {{ ticket.status }}
+          </span>
+          <span class="priority-badge" [ngClass]="'priority-' + (ticket.priority ? ticket.priority.toLowerCase() : '')">
+            {{ ticket.priority }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">
+          <mat-icon>assignment</mat-icon>
+          <span>Projet</span>
+        </div>
+        <div class="info-value">{{ ticket.project?.name || 'Non assigné' }}</div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">
+          <mat-icon>category</mat-icon>
+          <span>Catégorie</span>
+        </div>
+        <div class="info-value">{{ ticket.problemCategory?.name || 'Non spécifié' }}</div>
+      </div>
+      
+      <div class="info-item">
+        <div class="info-label">
+          <mat-icon>calendar_today</mat-icon>
+          <span>Créé le</span>
+        </div>
+        <div class="info-value">{{ ticket.createdAt | date : "dd MMM yyyy, HH:mm" }}</div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-label">
+          <mat-icon>update</mat-icon>
+          <span>Dernière mise à jour</span>
+        </div>
+        <div class="info-value">
+          {{ ticket.updatedAt ? (ticket.updatedAt | date : "dd MMM yyyy, HH:mm") : "Non disponible" }}
+        </div>
+      </div>
+    </div>
+
+    <div class="content-section report-section">
+      <h3 class="section-title">
+        <mat-icon>report_problem</mat-icon>
+        Rapport de Refus
+      </h3>
+      <div class="content-box">
+        <p *ngIf="ticket.report" class="report-text">{{ ticket.report }}</p>
+        <div *ngIf="!ticket.report" class="empty-content">
+          <mat-icon>info</mat-icon>
+          <p>Aucun contenu de rapport disponible</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="content-section description-section" *ngIf="ticket.description">
+      <h3 class="section-title">
+        <mat-icon>description</mat-icon>
+        Description du Ticket Original
+      </h3>
+      <div class="content-box">
+        <p class="description-text">{{ ticket.description }}</p>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-flat-button class="close-btn" (click)="closeDialog()">Fermer</button>
+  </mat-dialog-actions>
+</div> 

@@ -1,0 +1,68 @@
+<mat-toolbar class="navbar">
+  <div class="logo-section">
+    <img class="logo-image" src="/logo.png" alt="SimSoft Logo" onerror="this.src='assets/logo.png'; this.onerror=null;" />
+    <div class="logo-text">
+      <span class="text-black">Sim</span><span class="text-orange">Soft</span>
+    </div>
+  </div>
+
+  <div class="nav-links">
+    <a class="nav-link" routerLink="/chef-projet" routerLinkActive="active">
+      <mat-icon>dashboard</mat-icon>
+      Dashboard
+    </a>
+    <a
+      class="nav-link"
+      routerLink="/chef-projet/projects"
+      routerLinkActive="active"
+    >
+      <mat-icon>work</mat-icon>
+      Projets
+    </a>
+    <a
+      class="nav-link"
+      routerLink="/chef-projet/equipe"
+      routerLinkActive="active"
+    >
+      <mat-icon>group</mat-icon>
+      Équipe
+    </a>
+    <a
+      class="nav-link"
+      routerLink="/chef-projet/tickets"
+      routerLinkActive="active"
+    >
+      <mat-icon>assignment</mat-icon>
+      Tickets
+    </a>
+    
+    <a
+      class="nav-link"
+      routerLink="/chef-projet/reports"
+      routerLinkActive="active"
+    >
+      <mat-icon>assessment</mat-icon>
+      Rapports
+    </a>
+  </div>
+
+  <div class="toolbar-icons">
+    <!-- Clean standalone notification icon -->
+    <mat-icon
+      [matBadge]="unreadNotifications"
+      [matBadgeHidden]="unreadNotifications === 0"
+      matBadgeColor="warn"
+      matBadgeSize="small"
+      class="notification-icon"
+      (click)="openNotificationDialog()"
+      matTooltip="Notifications"
+    >
+      notifications
+    </mat-icon>
+    <mat-icon class="account-icon" routerLink="/chef-projet/profile">account_circle</mat-icon>
+    <mat-icon class="logout-icon" (click)="logout()">exit_to_app</mat-icon>
+  </div>
+</mat-toolbar>
+
+<!-- Notification Menu - REPLACED WITH DIALOG -->
+<!-- We removed the mat-menu and moved functionality to the dialog -->

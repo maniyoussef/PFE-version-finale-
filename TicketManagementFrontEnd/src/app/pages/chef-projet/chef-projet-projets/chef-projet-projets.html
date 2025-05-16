@@ -1,0 +1,81 @@
+<!-- project.component.html -->
+<div class="chef-projet-projects-container">
+  <div class="particle-background"></div>
+  <div class="animated-gradient"></div>
+
+  <!-- Main Content Area -->
+  <main class="chef-projet-main-content">
+    <div class="projects-container">
+      <div class="header">
+        <div class="title-section">
+          <h1 class="projects-title">Mes Projets Assignés</h1>
+          <div class="total-count">{{ filteredProjects.length }} projet<span *ngIf="filteredProjects.length !== 1">s</span></div>
+        </div>
+        <div class="search-container">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input 
+            type="text" 
+            placeholder="Rechercher un projet..." 
+            class="search-input"
+            (input)="searchProjects($event)"
+            [value]="searchTerm">
+          <button *ngIf="searchTerm" 
+                  class="clear-search-button" 
+                  (click)="searchTerm = ''; filterProjects()">
+            <mat-icon>clear</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="content-card">
+        <!-- Loading state -->
+        <div *ngIf="isLoading" class="loading-container">
+          <div class="ripple-loader">
+            <div></div>
+            <div></div>
+          </div>
+          <p>Chargement des projets...</p>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="!isLoading && projects.length === 0" class="empty-container">
+          <div class="empty-icon">
+            <mat-icon>folder_off</mat-icon>
+          </div>
+          <h2>Aucun projet assigné</h2>
+          <p>Vous n'avez pas encore de projets assignés</p>
+        </div>
+
+        <!-- Empty search results -->
+        <div *ngIf="!isLoading && projects.length > 0 && filteredProjects.length === 0" class="empty-container">
+          <div class="empty-icon">
+            <mat-icon>search_off</mat-icon>
+          </div>
+          <h2>Aucun résultat trouvé</h2>
+          <p>Aucun projet ne correspond à votre recherche "{{ searchTerm }}"</p>
+          <button class="clear-search-button" (click)="searchTerm = ''; filterProjects()">
+            <mat-icon>clear</mat-icon>
+            Effacer la recherche
+          </button>
+        </div>
+
+        <!-- Projects grid -->
+        <div *ngIf="!isLoading && filteredProjects.length > 0" class="projects-grid-container">
+          <div class="projects-grid">
+            <div *ngFor="let project of filteredProjects; let i = index" class="project-card" [attr.data-index]="i">
+              <div class="card-glow"></div>
+              
+              <div class="project-icon">
+                <mat-icon>folder</mat-icon>
+              </div>
+              
+              <div class="project-info">
+                <h3 class="project-name">{{ project.name }}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

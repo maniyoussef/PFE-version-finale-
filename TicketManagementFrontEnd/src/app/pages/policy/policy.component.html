@@ -1,0 +1,62 @@
+<div class="admin-dashboard-container">
+  <!-- Top Bar -->
+  <app-top-bar></app-top-bar>
+
+  <!-- Floating Dashboard Button -->
+  <div class="dashboard-action">
+    <button mat-fab color="accent" (click)="navigateToDashboard()" aria-label="Return to dashboard">
+      <mat-icon>dashboard</mat-icon>
+    </button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <div class="content-container">
+      <div class="header-container">
+        <h1 class="title fade-in">Politique de confidentialité</h1>
+      </div>
+
+      <div class="content-wrapper fade-in">
+        <div class="stats-grid">
+          <mat-card class="stat-card fade-in-up delay-1s">
+            <mat-card-content>
+              <div class="icon-container">
+                <mat-icon>security</mat-icon>
+              </div>
+              <div class="stat-info">
+                <h2>Protection des données</h2>
+                <p>
+                  Nous nous engageons à protéger vos informations personnelles et à
+                  garantir la sécurité de vos données.
+                </p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card fade-in-up delay-2s">
+            <mat-card-content>
+              <div class="icon-container">
+                <mat-icon>description</mat-icon>
+              </div>
+              <div class="stat-info">
+                <h2>Conditions d'utilisation</h2>
+                <p>
+                  Veuillez lire attentivement nos conditions d'utilisation avant
+                  d'utiliser nos services.
+                </p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="policy-details fade-in delay-3s">
+          <p>
+            Notre politique de confidentialité décrit comment nous collectons,
+            utilisons et protégeons vos données personnelles. En utilisant nos
+            services, vous acceptez notre politique de confidentialité.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

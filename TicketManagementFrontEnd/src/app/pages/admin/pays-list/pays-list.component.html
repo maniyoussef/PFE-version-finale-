@@ -1,0 +1,109 @@
+<div class="pays-container">
+  <div class="particle-background"></div>
+
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Gestion des Pays</h1>
+      <div class="header-actions">
+        <div class="search-sort-container">
+          <div class="search-container">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Rechercher</mat-label>
+              <input matInput [(ngModel)]="searchTerm" placeholder="Nom ou code du pays..." />
+              <button *ngIf="searchTerm" matSuffix mat-icon-button (click)="searchTerm=''">
+                <mat-icon>close</mat-icon>
+              </button>
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No countries state -->
+    <div *ngIf="!isLoading && getFilteredCountries().length === 0" class="empty-state">
+      <mat-icon>public</mat-icon>
+      <p *ngIf="!searchTerm">Aucun pays trouvé</p>
+      <p *ngIf="searchTerm">Aucun pays ne correspond à votre recherche</p>
+    </div>
+
+    <!-- Countries Grid -->
+    <div *ngIf="!isLoading && getFilteredCountries().length > 0" class="pays-grid" [@fadeIn]>
+      <mat-card 
+        *ngFor="let country of getFilteredCountries()" 
+        class="pays-card"
+        [class.card-highlighted]="activeCard === country.id"
+        (mouseenter)="setActiveCard(country.id)"
+        (mouseleave)="setActiveCard(null)"
+        [@cardEnter]>
+        <mat-card-content>
+          <div class="flag-container">
+            <img
+              [src]="'https://flagcdn.com/48x36/' + country.code + '.png'"
+              [alt]="country.name"
+              class="country-flag"
+              (error)="handleFlagError($event)"
+            />
+          </div>
+          <div class="country-info">
+            <h3 class="country-name">{{ country.name }}</h3>
+            <div class="country-code">{{ country.code.toUpperCase() }}</div>
+          </div>
+          <button 
+            mat-icon-button 
+            color="warn" 
+            class="delete-btn" 
+            (click)="deleteCountry(country)"
+            matTooltip="Supprimer ce pays">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Add Country Form -->
+    <div class="add-country-form" [@fadeIn]>
+      <h2 class="form-title">Ajouter un nouveau pays</h2>
+      <div class="form-content">
+        <mat-form-field appearance="outline" class="country-select">
+          <mat-label>Sélectionnez un pays</mat-label>
+          <mat-select
+            [(ngModel)]="nouveauPays"
+            (selectionChange)="onCountrySelect($event.value)"
+          >
+            <mat-option
+              *ngFor="let country of countryOptions"
+              [value]="country"
+            >
+              <div class="country-option">
+                <img
+                  [src]="'https://flagcdn.com/24x18/' + country.code + '.png'"
+                  class="country-flag-small"
+                  (error)="handleFlagError($event)"
+                />
+                <span>{{ country.name }} ({{ country.code.toUpperCase() }})</span>
+              </div>
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>public</mat-icon>
+        </mat-form-field>
+
+        <button
+          mat-raised-button
+          (click)="ajouterPays()"
+          [disabled]="!nouveauPays"
+          class="add-button"
+        >
+          <mat-icon>add</mat-icon> Ajouter le pays
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,6 @@
+@SimSoftAPI_HostAddress = http://localhost:5147
+
+GET {{SimSoftAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

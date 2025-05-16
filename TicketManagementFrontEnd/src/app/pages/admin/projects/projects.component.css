@@ -1,0 +1,28 @@
+.projects-container {
+  padding: 20px;
+}
+
+.project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+  max-width: 500px;
+}
+
+.project-table {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}

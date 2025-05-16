@@ -1,0 +1,57 @@
+<div class="notification-dialog">
+  <div class="notification-header">
+    <h2>Notifications</h2>
+    <div class="actions">
+      <button mat-button color="primary" (click)="markAllAsRead()" class="read-all-btn">
+        <mat-icon>done_all</mat-icon>
+        Tout marquer comme lu
+      </button>
+      <button mat-button color="basic" (click)="close()" class="close-btn">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+  
+  <mat-divider></mat-divider>
+  
+  <div class="notification-content">
+    <div class="notification-summary" *ngIf="notifications.length > 0">
+      <span>{{ notifications.length }} notification(s), {{ unreadCount }} non lue(s)</span>
+    </div>
+    
+    <ng-container *ngIf="notifications.length > 0; else noNotifications">
+      <div class="notification-list">
+        <div *ngFor="let notification of notifications" 
+            [ngClass]="getNotificationClass(notification)" 
+            (click)="navigateToLink(notification.route, notification.id)">
+          
+          <div class="notification-icon">
+            <mat-icon>{{ getNotificationIcon(notification.type) }}</mat-icon>
+          </div>
+          
+          <div class="notification-details">
+            <div class="notification-message" [innerHTML]="notification.message"></div>
+            <div class="notification-meta">
+              <span class="notification-time">{{ notification.timestamp | date:'dd MMM yyyy, HH:mm' }}</span>
+              <span class="notification-type">{{ notification.type }}</span>
+            </div>
+          </div>
+          
+          <div class="notification-actions">
+            <button mat-icon-button (click)="markAsRead(notification.id); $event.stopPropagation()" 
+                    *ngIf="!notification.isRead" matTooltip="Marquer comme lu">
+              <mat-icon>done</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    
+    <ng-template #noNotifications>
+      <div class="no-notifications">
+        <mat-icon>notifications_off</mat-icon>
+        <p>Aucune notification</p>
+      </div>
+    </ng-template>
+  </div>
+</div> 

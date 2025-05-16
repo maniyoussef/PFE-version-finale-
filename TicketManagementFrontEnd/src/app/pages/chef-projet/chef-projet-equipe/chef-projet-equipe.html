@@ -1,0 +1,91 @@
+<div class="chef-projet-equipe-container">
+  <div class="particle-background"></div>
+  <div class="animated-gradient"></div>
+
+  <!-- Main Content Area -->
+  <main class="chef-projet-main-content">
+    <div class="equipe-container">
+      <div class="header">
+        <div class="title-section">
+          <h1 class="equipe-title">Mon Équipe</h1>
+          <div class="total-count">{{ collaborators.length }} membre<span *ngIf="collaborators.length !== 1">s</span></div>
+        </div>
+        <div class="search-container" *ngIf="collaborators.length > 0">
+          <mat-icon class="search-icon">search</mat-icon>
+          <input 
+            type="text" 
+            placeholder="Rechercher un membre..." 
+            class="search-input"
+            (input)="searchCollaborators($event)"
+            [value]="searchTerm">
+          <button *ngIf="searchTerm" 
+                  class="clear-search-button" 
+                  (click)="searchTerm = ''; filterCollaborators()">
+            <mat-icon>clear</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="content-card">
+        <!-- Loading state -->
+        <div *ngIf="isLoading" class="loading-container">
+          <div class="ripple-loader">
+            <div></div>
+            <div></div>
+          </div>
+          <p>Chargement des membres de l'équipe...</p>
+        </div>
+
+        <!-- Error state -->
+        <div *ngIf="!isLoading && errorMessage" class="error-container">
+          <div class="error-icon">
+            <mat-icon>error_outline</mat-icon>
+          </div>
+          <h2>Erreur</h2>
+          <p>{{ errorMessage }}</p>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="!isLoading && !errorMessage && collaborators.length === 0" class="empty-container">
+          <div class="empty-icon">
+            <mat-icon>group_off</mat-icon>
+          </div>
+          <h2>Aucun collaborateur</h2>
+          <p>Aucun membre n'est assigné à votre équipe pour le moment</p>
+        </div>
+
+        <!-- Empty search results -->
+        <div *ngIf="!isLoading && !errorMessage && collaborators.length > 0 && filteredCollaborators.length === 0" class="empty-container">
+          <div class="empty-icon">
+            <mat-icon>search_off</mat-icon>
+          </div>
+          <h2>Aucun résultat trouvé</h2>
+          <p>Aucun membre ne correspond à votre recherche "{{ searchTerm }}"</p>
+          <button class="clear-search-button" (click)="searchTerm = ''; filterCollaborators()">
+            <mat-icon>clear</mat-icon>
+            Effacer la recherche
+          </button>
+        </div>
+
+        <!-- Team members grid -->
+        <div *ngIf="!isLoading && !errorMessage && filteredCollaborators && filteredCollaborators.length > 0" class="team-grid-container">
+          <div class="team-grid">
+            <div *ngFor="let collaborateur of filteredCollaborators; let i = index" class="member-card" [attr.data-index]="i">
+              <div class="card-glow"></div>
+              
+              <div class="member-avatar">
+                <mat-icon>person</mat-icon>
+              </div>
+              
+              <div class="member-info">
+                <h3 class="member-name">{{ collaborateur.name }} {{ collaborateur.lastName }}</h3>
+                <p class="member-email">{{ collaborateur.email }}</p>
+                <span class="member-role">{{ collaborateur.role?.name || 'Non défini' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

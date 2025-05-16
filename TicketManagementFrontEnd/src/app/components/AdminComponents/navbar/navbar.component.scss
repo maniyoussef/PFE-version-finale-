@@ -1,0 +1,284 @@
+/* Root variables for consistent design */
+:host {
+  --primary: #ff7043;
+  --primary-dark: #e64a19;
+  --primary-light: #ffccbc;
+  --secondary: #2c3e50;
+  --secondary-dark: #1a2530;
+  --secondary-light: #b0bec5;
+  --text-dark: #333333;
+  --text-medium: #545454;
+  --text-light: #757575;
+  --background: #ffffff;
+  --surface: #f8f9fa;
+  --divider: #e0e0e0;
+  --success: #4caf50;
+  --warning: #ff9800;
+  --danger: #f44336;
+  --info: #ff7043;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow: 0 3px 6px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --navbar-height: 40px;
+  --topbar-height: 30px;
+  display: block;
+  
+  /* Add z-index to ensure navbar is above other elements but below fixed overlays */
+  position: relative;
+  z-index: 100;
+}
+
+/* navbar.component.scss */
+.navbar {
+  height: var(--navbar-height, 40px);
+  background-color: var(--background);
+  border-bottom: 1px solid var(--divider);
+  padding: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  justify-content: space-between;
+  color: var(--text-dark);
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 100%;
+  border-right: 1px solid var(--divider);
+  background-color: var(--background);
+  min-width: 180px;
+  margin-right: 10px;
+}
+
+.logo-image {
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  letter-spacing: -0.5px;
+}
+
+.text-black {
+  color: var(--text-dark);
+}
+
+.text-orange {
+  color: var(--primary);
+}
+
+.nav-divider {
+  height: 30px;
+  width: 1px;
+  background-color: var(--divider);
+  margin: 0 5px;
+}
+
+.nav-links {
+  display: flex;
+  height: 100%;
+  padding-left: 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  justify-content: flex-start;
+  width: calc(100% - 400px);
+  max-width: 1200px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.nav-link {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  margin: 0 3px;
+  color: var(--text-dark);
+  font-size: 13px;
+  text-decoration: none;
+  position: relative;
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+
+  &:hover {
+    color: var(--primary);
+    background-color: rgba(255, 112, 67, 0.05);
+  }
+
+  &.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--primary);
+  }
+}
+
+.toolbar-icons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+  gap: 12px;
+  min-width: 120px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .logout-icon {
+    color: var(--danger);
+
+    &:hover {
+      color: #c82333;
+    }
+  }
+}
+
+.notification-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  mat-icon {
+    color: var(--text-dark);
+  }
+  
+  .notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: var(--danger);
+    color: white;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+}
+
+/* Deep targeting for the no-background button */
+::ng-deep .no-background-button {
+  &.mat-mdc-icon-button {
+    background-color: white !important;
+    
+    .mat-mdc-button-persistent-ripple {
+      background-color: white !important;
+    }
+    
+    .mat-mdc-button-ripple {
+      background-color: white !important;
+    }
+    
+    .mat-mdc-button-touch-target {
+      background-color: white !important;
+    }
+    
+    .mdc-icon-button__ripple {
+      background-color: white !important;
+    }
+  }
+}
+
+/* Notification pulse animation */
+.notification-pulse {
+  animation: subtle-pulse 2s infinite ease-in-out;
+}
+
+@keyframes subtle-pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .navbar {
+    height: var(--navbar-height, 60px);
+    padding: 0 5px;
+  }
+
+  .logo-section {
+    padding: 0 10px;
+    min-width: 160px;
+  }
+
+  .logo-image {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+  }
+
+  .logo-text {
+    font-size: 18px;
+  }
+
+  .nav-link {
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  .toolbar-icons {
+    padding-right: 10px;
+
+    mat-icon {
+      margin-left: 12px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+/* Dropdown menu positioning fix - simpler version */
+.menu-container {
+  position: relative;
+}
+
+/* Specific fix for the Données de Base dropdown trigger */
+.nav-link[matMenuTriggerFor] {
+  cursor: pointer;
+  
+  &:after {
+    content: "▼";
+    font-size: 8px;
+    margin-left: 4px;
+    margin-top: 1px;
+    opacity: 0.7;
+  }
+}

@@ -1,0 +1,111 @@
+<!-- historique-tickets.component.html -->
+<div class="historique-container">
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Historique des Tickets Résolus</h1>
+      <div class="header-actions">
+        <div class="search-container">
+          <span class="search-icon">
+            <mat-icon>search</mat-icon>
+          </span>
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Rechercher un ticket..." 
+            [(ngModel)]="searchText" 
+            (input)="applyFilter($event)"
+          />
+          <button *ngIf="searchText" class="clear-search-btn" (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No tickets state -->
+    <div *ngIf="!isLoading && resolvedTickets.length === 0" class="empty-state">
+      <mat-icon>history</mat-icon>
+      <p>Aucun ticket résolu pour le moment</p>
+    </div>
+
+    <!-- Tickets Table -->
+    <div *ngIf="!isLoading && resolvedTickets.length > 0" class="table-container">
+      <table class="tickets-table">
+        <thead>
+          <tr>
+            <th>Titre</th>
+            <th>Qualification</th>
+            <th>Priorité</th>
+            <th>Projet</th>
+            <th>Catégorie</th>
+            <th>Status</th>
+            <th>Assigné à</th>
+            <th>Date de résolution</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ticket of filteredTickets" class="ticket-row">
+            <td class="title-cell">{{ ticket.title }}</td>
+            <td>{{ ticket.qualification }}</td>
+            <td>
+              <div class="priority-badge" [ngClass]="getPriorityClass(ticket.priority)">
+                {{ ticket.priority }}
+              </div>
+            </td>
+            <td>{{ ticket.project?.name || "Non spécifié" }}</td>
+            <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+            <td>
+              <div class="status-badge" [ngClass]="getStatusClass(ticket.status)">
+                <span class="status-indicator"></span>
+                {{ ticket.status || 'Résolu' }}
+              </div>
+            </td>
+            <td class="assignee-cell">
+              {{
+                ticket.assignedTo
+                  ? ticket.assignedTo.name + " " + ticket.assignedTo.lastName
+                  : "Non assigné"
+              }}
+            </td>
+            <td>{{ formatDate(ticket.updatedAt) }}</td>
+            <td class="actions-cell">
+              <button 
+                mat-icon-button 
+                color="primary"
+                matTooltip="Voir la description"
+                (click)="showDescription(ticket)">
+                <mat-icon>description</mat-icon>
+              </button>
+              <button 
+                mat-icon-button 
+                color="accent"
+                matTooltip="Voir les détails"
+                (click)="viewTicketDetails(ticket)">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="pagination-container">
+        <mat-paginator
+          [length]="resolvedTickets.length"
+          [pageSize]="pageSize"
+          [pageSizeOptions]="[5, 10, 25, 50]"
+          (page)="onPageChange($event)"
+          aria-label="Sélectionner la page">
+        </mat-paginator>
+      </div>
+    </div>
+  </div>
+</div>

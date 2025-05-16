@@ -1,0 +1,141 @@
+<!-- tickets.component.html -->
+<div class="tickets-container">
+  <div class="particle-background"></div>
+
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Gestion des Tickets</h1>
+      <div class="header-actions">
+        <div class="search-sort-wrapper">
+          <div class="search-container">
+            <span class="search-icon">
+              <mat-icon>search</mat-icon>
+            </span>
+            <input 
+              type="text" 
+              class="search-input" 
+              placeholder="Rechercher un ticket..." 
+              [(ngModel)]="searchTerm" 
+              (input)="applySearch()"
+            />
+            <button *ngIf="searchTerm" class="clear-search-btn" (click)="clearSearch()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="sort-container">
+            <label for="sort-select">Trier par :</label>
+            <select id="sort-select" (change)="applySort($event)">
+              <option value="newest">Plus récents en premier</option>
+              <option value="oldest">Plus anciens en premier</option>
+              <option value="status">Statut</option>
+              <option value="title">Titre</option>
+              <option value="priority">Priorité</option>
+            </select>
+          </div>
+        </div>
+        <button class="export-button" (click)="openExportDialog()">
+          <span class="button-icon">
+            <mat-icon>file_download</mat-icon>
+          </span>
+          <span class="button-text">Exporter Excel</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No tickets state -->
+    <div *ngIf="!isLoading && tickets.length === 0" class="empty-state">
+      <mat-icon>inbox</mat-icon>
+      <p>Aucun ticket trouvé</p>
+    </div>
+
+    <!-- Tickets Table -->
+    <div *ngIf="!isLoading && tickets.length > 0" class="ticket-list-container">
+      <table class="ticket-table">
+        <thead>
+          <tr>
+            <th>Titre</th>
+            <th>Qualification</th>
+            <th>Priorité</th>
+            <th>Projet</th>
+            <th>Catégorie du problème</th>
+            <th>Status</th>
+            <th>Assigné à</th>
+            <th>Date de création</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let ticket of tickets"
+            [class.row-highlighted]="selectedTicket === ticket"
+          >
+            <td>{{ ticket.title }}</td>
+            <td>{{ ticket.qualification }}</td>
+            <td>
+              <div
+                class="priority-badge"
+                [class.priority-high]="ticket.priority === 'Haute'"
+                [class.priority-medium]="ticket.priority === 'Moyenne'"
+                [class.priority-low]="ticket.priority === 'Basse'"
+              >
+                {{ ticket.priority }}
+              </div>
+            </td>
+            <td>{{ ticket.project?.name || "Non spécifié" }}</td>
+            <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+            <td>
+              <div
+                class="status-badge"
+                [style.backgroundColor]="getStatusColor(ticket.status)"
+              >
+                {{ ticket.status || "Statut non spécifié" }}
+              </div>
+            </td>
+            <td>
+              {{
+                ticket.assignedTo
+                  ? ticket.assignedTo.name + " " + ticket.assignedTo.lastName
+                  : "Non assigné"
+              }}
+            </td>
+            <td>
+              {{ formatCreatedDate(ticket.createdAt) }}
+              <span *ngIf="!ticket.createdAt" class="date-warning" title="Date manquante">⚠️</span>
+            </td>
+            <td class="actions-cell">
+              <div class="actions-container">
+                <!-- Replace "description" button with "details" button -->
+                <button type="button" class="action-btn view-btn" matTooltip="Voir détails" (click)="openTicketDetailsDialog(ticket)">
+                  <mat-icon>info</mat-icon>
+                </button>
+                
+                <button type="button" class="action-btn comment-btn" matTooltip="Commentaires" (click)="handleCommentClick(ticket, $event)">
+                  <mat-icon>comment</mat-icon>
+                </button>
+                
+                <button *ngIf="isAcceptedStatus(ticket.status)" type="button" class="action-btn assign-btn" matTooltip="Assigner" (click)="handleAssignClick(ticket, $event)">
+                  <mat-icon>person_add</mat-icon>
+                </button>
+                
+                <button *ngIf="isOpenStatus(ticket.status)" type="button" class="action-btn accept-btn" matTooltip="Accepter" (click)="handleAcceptClick(ticket, $event)">
+                  <mat-icon>check_circle</mat-icon>
+                </button>
+                
+                <button *ngIf="isOpenStatus(ticket.status)" type="button" class="action-btn refuse-btn" matTooltip="Refuser" (click)="handleRefuseClick(ticket, $event)">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

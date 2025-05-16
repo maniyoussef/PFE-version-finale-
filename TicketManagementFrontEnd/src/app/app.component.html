@@ -1,0 +1,9 @@
+<ng-container *ngIf="isAdminRoute">
+  <!-- If it's an admin route, display the admin dashboard layout -->
+  <router-outlet></router-outlet>
+</ng-container>
+
+<ng-container *ngIf="!isAdminRoute">
+  <!-- If it's not an admin route, display the regular layout -->
+  <router-outlet></router-outlet>
+</ng-container>

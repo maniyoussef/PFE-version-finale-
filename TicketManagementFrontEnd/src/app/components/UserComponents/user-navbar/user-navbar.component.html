@@ -1,0 +1,45 @@
+<!-- navbar.component.html -->
+<mat-toolbar class="navbar">
+  <div class="logo-section">
+    <img src="/logo.png" alt="SimSoft Logo" class="logo-image" />
+    <div class="logo-text">
+      <span class="text-black">Sim</span><span class="text-orange">Soft</span>
+    </div>
+  </div>
+
+  <nav class="nav-links">
+    <a routerLink="/user/dashboard" routerLinkActive="active" class="nav-link">
+      Tableau de bord
+    </a>
+    <a routerLink="/user/mes-tickets" routerLinkActive="active" class="nav-link">
+      Mes Tickets
+    </a>
+  </nav>
+
+  <div class="toolbar-icons">
+    <!-- Developer Tools Menu removed -->
+    
+    <div class="notification-icon">
+      <button mat-icon-button 
+              [matBadge]="unreadCount > 0 ? unreadCount : null" 
+              matBadgeSize="small" 
+              matBadgeColor="accent" 
+              [matTooltip]="'Notifications'"
+              (click)="openNotificationDialog()">
+        <mat-icon>notifications</mat-icon>
+      </button>
+    </div>
+    <button mat-icon-button 
+            (click)="openProfileDirectly($event)" 
+            style="margin-right: 20px;" 
+            matTooltip="Mon Profil">
+      <mat-icon style="color: #3f51b5;">account_circle</mat-icon>
+    </button>
+    <button mat-icon-button 
+            (click)="logout()" 
+            matTooltip="Déconnexion" 
+            style="margin-left: 5px;">
+      <mat-icon style="color: #f44336;">exit_to_app</mat-icon>
+    </button>
+  </div>
+</mat-toolbar>

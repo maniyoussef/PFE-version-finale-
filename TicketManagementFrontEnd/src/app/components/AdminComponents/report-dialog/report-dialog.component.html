@@ -1,0 +1,72 @@
+<div class="report-dialog">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>Rapport de Ticket #{{ ticket.id }}</h2>
+    <button mat-icon-button (click)="closeDialog()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <mat-dialog-content>
+    <div class="ticket-details">
+      <div class="detail-row">
+        <span class="label">Titre:</span>
+        <span class="value title">{{ ticket.title }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Projet:</span>
+        <span class="value project">{{ ticket.project?.name || "N/A" }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Catégorie:</span>
+        <span class="value category">{{ ticket.problemCategory?.name || "N/A" }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Priorité:</span>
+        <span
+          class="value priority"
+          [ngClass]="'priority-' + (ticket.priority ? ticket.priority.toLowerCase() : '')"
+          >{{ ticket.priority }}</span
+        >
+      </div>
+      <div class="detail-row">
+        <span class="label">Status:</span>
+        <span class="value status" [ngClass]="'status-' + (ticket.status ? ticket.status.toLowerCase().replace(' ', '-') : '')">
+          {{ ticket.status }}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Date de création:</span>
+        <span class="value date">{{ ticket.createdAt | date : "dd/MM/yyyy à HH:mm" }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Dernière mise à jour:</span>
+        <span class="value date">{{
+          ticket.updatedAt ? (ticket.updatedAt | date : "dd/MM/yyyy à HH:mm") : "N/A"
+        }}</span>
+      </div>
+    </div>
+
+    <div class="report-section">
+      <h3>Contenu du Rapport</h3>
+      <div class="report-content">
+        <p *ngIf="ticket.report" class="report-text">{{ ticket.report }}</p>
+        <p *ngIf="!ticket.report" class="no-report">
+          Aucun contenu de rapport disponible
+        </p>
+      </div>
+    </div>
+    
+    <div class="description-section" *ngIf="ticket.description">
+      <h3>Description du Ticket Original</h3>
+      <div class="description-content">
+        <p class="description-text">{{ ticket.description }}</p>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Fermer</button>
+  </mat-dialog-actions>
+</div>

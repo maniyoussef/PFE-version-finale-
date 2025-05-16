@@ -1,0 +1,253 @@
+/* Root variables for consistent design */
+:root {
+  --primary: #ff7043;
+  --primary-dark: #e64a19;
+  --primary-light: #ffccbc;
+  --secondary: #2c3e50;
+  --secondary-dark: #1a2530;
+  --secondary-light: #b0bec5;
+  --text-dark: #263238;
+  --text-medium: #546e7a;
+  --text-light: #90a4ae;
+  --background: #ffffff;
+  --surface: #f8f9fa;
+  --divider: #eceff1;
+  --success: #4caf50;
+  --warning: #ff9800;
+  --danger: #f44336;
+  --info: #2196f3;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow: 0 3px 6px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --topbar-height: 30px;
+  --navbar-height: 60px;
+  --navbar-top-margin: 4px; /* Added margin to push navbar down slightly */
+}
+
+/* navbar.component.scss */
+.navbar {
+  height: var(--navbar-height);
+  max-height: var(--navbar-height);
+  min-height: var(--navbar-height);
+  background-color: white;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  position: fixed;
+  top: calc(var(--topbar-height) + var(--navbar-top-margin)); /* Added margin to push navbar down */
+  left: 0;
+  z-index: 990; /* Make sure this is lower than topbar z-index */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: var(--navbar-height);
+  border-right: 1px solid #e9ecef;
+  background-color: white;
+  min-width: 200px;
+}
+
+.logo-image {
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+
+.text-black {
+  color: #2c3e50;
+}
+
+.text-orange {
+  color: #ff7043;
+}
+
+.nav-links {
+  display: flex;
+  height: 100%;
+  padding-left: 20px;
+}
+
+.nav-link {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  color: #495057;
+  font-size: 14px;
+  text-decoration: none;
+  position: relative;
+  
+  &:hover {
+    color: #ff7043;
+  }
+  
+  &.active {
+    color: #ff7043;
+    font-weight: 500;
+    
+    &:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background-color: #ff7043;
+    }
+  }
+}
+
+.toolbar-icons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding-right: 20px;
+  
+  mat-icon {
+    margin-left: 15px;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 20px;
+    
+    &:hover {
+      color: #ff7043;
+    }
+  }
+  
+  .logout-icon {
+    color: #dc3545;
+    
+    &:hover {
+      color: #c82333;
+    }
+  }
+  
+  a {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+  }
+  
+  .icon-link {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    
+    &:hover {
+      mat-icon {
+        color: #3f51b5;
+      }
+    }
+  }
+}
+
+.notification-button {
+  position: relative;
+  margin-right: 15px;
+
+  .mat-badge-content {
+    font-size: 10px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    right: -6px !important;
+    top: -6px !important;
+  }
+
+  mat-icon {
+    color: #ff6f00;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    mat-icon {
+      transform: scale(1.1);
+    }
+  }
+}
+
+.notification-icon-container {
+  position: relative;
+  display: inline-block;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background-color: #f44336;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+/* Notification pulse animation */
+.notification-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(244, 67, 54, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+  }
+}
+
+/* Override Material Badge styles to make it more noticeable */
+::ng-deep .mat-badge-warn .mat-badge-content {
+  background-color: #f44336;
+  font-weight: bold;
+  font-size: 10px;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    height: 55px;
+    top: calc(36px + 4px); /* Adjusted for smaller topbar + margin */
+  }
+  
+  .logo-section {
+    height: 55px;
+    padding: 0 15px;
+    min-width: 160px;
+  }
+  
+  .logo-image {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+  }
+  
+  .logo-text {
+    font-size: 18px;
+  }
+  
+  .nav-link {
+    height: 55px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  
+  .toolbar-icons {
+    padding-right: 15px;
+  }
+}

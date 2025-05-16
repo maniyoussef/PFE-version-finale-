@@ -1,0 +1,60 @@
+<div class="dashboard-container">
+  <div class="dashboard-content">
+    <!-- Welcoming header -->
+    <div class="dashboard-header">
+      <h1>Tableau de Bord</h1>
+      <div class="subtitle">Bienvenue dans votre espace utilisateur</div>
+    </div>
+
+    <!-- Quick stats overview with loading indicator -->
+    <div class="stats-row">
+      <div *ngIf="isLoading" class="loading-indicator">
+        <mat-icon class="spinner">sync</mat-icon>
+        <span>Chargement des statistiques...</span>
+      </div>
+      
+      <div class="stat-card" *ngFor="let stat of stats" [class.hidden]="isLoading">
+        <div class="stat-icon">
+          <mat-icon>{{ stat.icon }}</mat-icon>
+        </div>
+        <div class="stat-details">
+          <span class="stat-value">{{ stat.value }}</span>
+          <span class="stat-label">{{ stat.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- User actions section -->
+    <div class="actions-section">
+      <h2>Actions rapides</h2>
+      
+      <div class="action-buttons">
+        <button mat-button class="action-button" (click)="navigateToTickets()">
+          <mat-icon>list_alt</mat-icon>
+          <span>Mes Tickets</span>
+        </button>
+        
+        <button mat-button class="action-button" (click)="navigateToProfile()">
+          <mat-icon>person</mat-icon>
+          <span>Mon Profil</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Help section -->
+    <div class="help-section">
+      <mat-card class="help-card">
+        <mat-card-content>
+          <div class="help-icon">
+            <mat-icon>help_outline</mat-icon>
+          </div>
+          <div class="help-text">
+            <h3>Besoin d'aide?</h3>
+            <p>Si vous rencontrez des problèmes ou avez des questions, notre équipe de support est disponible pour vous aider.</p>
+            <button mat-stroked-button (click)="navigateToSupport()">Contacter le support</button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

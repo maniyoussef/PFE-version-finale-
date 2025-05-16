@@ -1,0 +1,89 @@
+<!-- navbar.component.html -->
+<mat-toolbar class="navbar">
+  <div class="logo-section">
+    <img src="/logo.png" alt="SimSoft Logo" class="logo-image" />
+    <div class="logo-text">
+      <span class="text-black">Sim</span><span class="text-orange">Soft</span>
+    </div>
+  </div>
+
+  <nav class="nav-links">
+    <a
+      (click)="navigateTo('/admin/dashboard')"
+      routerLinkActive="active"
+      class="nav-link"
+    >
+      Tableau de bord
+    </a>
+    <div class="nav-divider"></div>
+    <a
+      (click)="navigateTo('/admin/tickets')"
+      routerLinkActive="active"
+      class="nav-link"
+    >
+      Tickets
+    </a>
+    <div class="nav-divider"></div>
+    <a
+      (click)="navigateTo('/admin/rapports')"
+      routerLinkActive="active"
+      class="nav-link"
+    >
+      Rapports
+    </a>
+    <div class="nav-divider"></div>
+    <a
+      (click)="navigateTo('/admin/problems')"
+      routerLinkActive="active"
+      class="nav-link"
+    >
+      Catégorie des Problèmes
+    </a>
+    <div class="nav-divider"></div>
+    <!-- Simplified dropdown implementation -->
+    <a
+      mat-button
+      class="nav-link"
+      [matMenuTriggerFor]="baseDataMenu"
+    >
+      Données de Base
+    </a>
+    <div class="nav-divider"></div>
+    <a
+      (click)="navigateTo('/admin/assignement')"
+      routerLinkActive="active"
+      class="nav-link"
+    >
+      Assignations
+    </a>
+    <div class="nav-divider"></div>
+    <a
+      (click)="navigateTo('/admin/historique')"
+      routerLinkActive="active"
+      class="nav-link"
+    >
+      Historique des tickets
+    </a>
+  </nav>
+
+  <div class="toolbar-icons">
+    <!-- Notification icon with badge -->
+    <div class="notification-container">
+      <mat-icon (click)="openNotificationDialog()" matTooltip="Notifications">notifications</mat-icon>
+      <span *ngIf="notificationCount > 0" class="notification-badge">{{notificationCount}}</span>
+    </div>
+    <mat-icon (click)="navigateTo('/admin/profile')">account_circle</mat-icon>
+    <mat-icon class="logout-icon" (click)="logout()" title="Déconnexion">exit_to_app</mat-icon>
+  </div>
+
+  <span class="navbar-spacer"></span>
+</mat-toolbar>
+
+<!-- Menu placed outside the toolbar -->
+<mat-menu #baseDataMenu="matMenu" class="base-data-menu">
+  <button mat-menu-item (click)="navigateTo('/admin/roles')">Roles</button>
+  <button mat-menu-item (click)="navigateTo('/admin/users')">Utilisateurs</button>
+  <button mat-menu-item (click)="navigateTo('/admin/societes')">Sociétés</button>
+  <button mat-menu-item (click)="navigateTo('/admin/projects')">Projets</button>
+  <button mat-menu-item (click)="navigateTo('/admin/pays-list')">Pays</button>
+</mat-menu>

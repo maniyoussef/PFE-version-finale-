@@ -1,0 +1,27 @@
+<div class="refuse-dialog">
+  <h2 mat-dialog-title>Refuser le ticket</h2>
+  <div mat-dialog-content>
+    <p>Veuillez fournir une raison pour le refus du ticket:</p>
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Rapport de refus</mat-label>
+      <textarea
+        matInput
+        [(ngModel)]="report"
+        rows="6"
+        placeholder="Donnez une explication détaillée des raisons du refus..."
+        required
+      ></textarea>
+    </mat-form-field>
+  </div>
+  <div mat-dialog-actions align="end">
+    <button mat-button (click)="onNoClick()">Annuler</button>
+    <button
+      mat-raised-button
+      color="warn"
+      [disabled]="!report.trim()"
+      (click)="submitRefusal()"
+    >
+      Refuser
+    </button>
+  </div>
+</div> 

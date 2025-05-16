@@ -1,0 +1,130 @@
+<div class="users-container">
+  <div class="particle-background"></div>
+
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Gestion des Utilisateurs</h1>
+
+      <div class="header-actions">
+        <div class="search-container">
+          <div class="search-field-wrapper">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              class="search-field"
+              placeholder="Rechercher des utilisateurs..."
+              [(ngModel)]="searchTerm"
+              (input)="filterUsers()"
+            />
+          </div>
+        </div>
+        <button class="add-button" (click)="openCreateDialog()">
+          <span class="button-icon">
+            <mat-icon>person_add</mat-icon>
+          </span>
+          <span class="button-text">Ajouter un Utilisateur</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- Empty state - No users -->
+    <div *ngIf="!isLoading && filteredUsers.length === 0" class="empty-state">
+      <mat-icon>person_off</mat-icon>
+      <p>Aucun utilisateur trouvé</p>
+      <button class="action-button" (click)="openCreateDialog()">Ajouter un Utilisateur</button>
+    </div>
+
+    <!-- Users Table -->
+    <div *ngIf="!isLoading && filteredUsers.length > 0" class="card-container">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Prénom</th>
+              <th>Email</th>
+              <th>Pays</th>
+              <th>Rôle</th>
+              <th>Statut</th>
+              <th>Détails</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of filteredUsers">
+              <td>{{ user.id }}</td>
+              <td>{{ user.name }}</td>
+              <td>{{ user.lastName }}</td>
+              <td>{{ user.email }}</td>
+              <td>
+                <div class="country-cell">
+                  <img
+                    *ngIf="getCountryIcon(user)"
+                    [src]="getCountryIcon(user)"
+                    alt="Flag"
+                    class="country-flag"
+                  />
+                  <span>{{ user.country?.name || "N/A" }}</span>
+                </div>
+              </td>
+              <td>
+                <div 
+                  class="badge role-badge"
+                  [ngClass]="{'admin-role': user.role?.name === 'Admin', 'standard-role': user.role?.name !== 'Admin'}"
+                >
+                  {{ user.role?.name || "N/A" }}
+                </div>
+              </td>
+              <td>
+                <div 
+                  class="badge status-badge"
+                  [ngClass]="user.hasContract ? 'active-status' : 'inactive-status'"
+                >
+                  {{ user.hasContract ? "Actif" : "Inactif" }}
+                </div>
+              </td>
+              <td class="action-cell">
+                <button
+                  class="action-button info-button"
+                  mat-icon-button
+                  (click)="openDetailsDialog(user.id || 0)"
+                  [disabled]="!user.id"
+                  matTooltip="Voir les détails"
+                >
+                  <mat-icon>info</mat-icon>
+                </button>
+              </td>
+              <td class="action-cell">
+                <button
+                  class="action-button edit-button"
+                  mat-icon-button
+                  (click)="openEditDialog(user.id || 0)"
+                  [disabled]="!user.id"
+                  matTooltip="Modifier l'utilisateur"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  class="action-button delete-button"
+                  mat-icon-button
+                  (click)="confirmDelete(user)"
+                  matTooltip="Supprimer l'utilisateur"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

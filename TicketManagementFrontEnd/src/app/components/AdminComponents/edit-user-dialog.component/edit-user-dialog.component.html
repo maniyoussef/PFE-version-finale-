@@ -1,0 +1,202 @@
+<div class="dialog-container">
+  <h2 class="dialog-title slide-in">
+    Modifier le Profil Utilisateur
+    <button
+      mat-icon-button
+      type="button"
+      class="edit-toggle-button"
+      (click)="onEdit()"
+      [matTooltip]="isEditing ? 'Désactiver la modification' : 'Activer la modification'"
+    >
+      <mat-icon>{{ isEditing ? "lock_open" : "lock" }}</mat-icon>
+    </button>
+  </h2>
+
+  <form [formGroup]="editForm" (ngSubmit)="onSubmit()" class="form-container">
+    <!-- Informations de Base -->
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.05s"
+    >
+      <mat-label>Prénom</mat-label>
+      <input matInput formControlName="name" placeholder="Prénom" />
+      <mat-icon matPrefix>person</mat-icon>
+      <mat-error *ngIf="editForm.get('name')?.hasError('required')">
+        Le prénom est requis
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.1s"
+    >
+      <mat-label>Nom</mat-label>
+      <input matInput formControlName="lastName" placeholder="Nom" />
+      <mat-icon matPrefix>person</mat-icon>
+      <mat-error *ngIf="editForm.get('lastName')?.hasError('required')">
+        Le nom est requis
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="full-width slide-in"
+      style="animation-delay: 0.15s"
+    >
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" placeholder="Email" />
+      <mat-icon matPrefix>email</mat-icon>
+      <mat-error *ngIf="editForm.get('email')?.hasError('required')">
+        L'email est requis
+      </mat-error>
+      <mat-error *ngIf="editForm.get('email')?.hasError('email')">
+        Format d'email invalide
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Country Dropdown -->
+    <div class="form-group slide-in" style="animation-delay: 0.2s">
+      <label for="countrySelect">Pays</label>
+      <select 
+        id="countrySelect" 
+        class="form-control"
+        formControlName="countryId" 
+        required>
+        <option [value]="null" disabled>Sélectionner un pays</option>
+        <option *ngFor="let country of data.countries" [value]="country.id">
+          {{ country.name }}
+        </option>
+      </select>
+      <div class="error-message" *ngIf="editForm.get('countryId')?.hasError('required') && editForm.get('countryId')?.touched">
+        Le pays est requis
+      </div>
+    </div>
+
+    <!-- Role Dropdown -->
+    <div class="form-group slide-in" style="animation-delay: 0.25s">
+      <label for="roleSelect">Rôle</label>
+      <select 
+        id="roleSelect" 
+        class="form-control"
+        formControlName="roleId" 
+        required>
+        <option [value]="null" disabled>Sélectionner un rôle</option>
+        <option *ngFor="let role of data.roles" [value]="role.id">
+          {{ role.name }}
+        </option>
+      </select>
+      <div class="error-message" *ngIf="editForm.get('roleId')?.hasError('required') && editForm.get('roleId')?.touched">
+        Le rôle est requis
+      </div>
+    </div>
+
+    <!-- Informations Supplémentaires -->
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.3s"
+    >
+      <mat-label>Numéro de Téléphone</mat-label>
+      <input
+        matInput
+        formControlName="phoneNumber"
+        placeholder="Numéro de Téléphone"
+      />
+      <mat-icon matPrefix>phone</mat-icon>
+    </mat-form-field>
+
+    <!-- Project Dropdown -->
+    <div class="form-group slide-in" style="animation-delay: 0.35s">
+      <label for="projectSelect">Projet</label>
+      <select 
+        id="projectSelect" 
+        class="form-control"
+        formControlName="projectId">
+        <option [value]="null">Aucun</option>
+        <option *ngFor="let project of data.projects" [value]="project.id">
+          {{ project.name }}
+        </option>
+      </select>
+    </div>
+
+    <!-- Company Dropdown -->
+    <div class="form-group slide-in" style="animation-delay: 0.4s">
+      <label for="companySelect">Entreprise</label>
+      <select 
+        id="companySelect" 
+        class="form-control"
+        formControlName="companyId">
+        <option [value]="null">Aucune</option>
+        <option *ngFor="let company of data.companies" [value]="company.id">
+          {{ company.name }}
+        </option>
+      </select>
+    </div>
+
+    <!-- Section Contrat -->
+    <div class="contract-section slide-in" style="animation-delay: 0.45s">
+      <div class="section-title">
+        <mat-icon>description</mat-icon>
+        Informations du Contrat
+      </div>
+
+      <div class="toggle-container">
+        <span class="toggle-label">A un Contrat</span>
+        <mat-slide-toggle
+          formControlName="hasContract"
+          color="primary"
+          (change)="scrollToBottom()"
+        ></mat-slide-toggle>
+      </div>
+
+      <div class="date-fields" *ngIf="editForm.get('hasContract')?.value">
+        <div class="form-group">
+          <label for="startDateInput">Date de Début du Contrat</label>
+          <input
+            id="startDateInput"
+            type="date"
+            class="form-control"
+            formControlName="contractStartDate"
+          />
+          <div class="error-message" *ngIf="editForm.get('contractStartDate')?.hasError('required') && editForm.get('contractStartDate')?.touched">
+            La date de début est requise
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="endDateInput">Date de Fin du Contrat</label>
+          <input
+            id="endDateInput"
+            type="date"
+            class="form-control"
+            formControlName="contractEndDate"
+          />
+          <div class="error-message" *ngIf="editForm.get('contractEndDate')?.hasError('required') && editForm.get('contractEndDate')?.touched">
+            La date de fin est requise
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="dialog-actions slide-in" style="animation-delay: 0.5s">
+      <button mat-button type="button" class="edit-button" (click)="onEdit()">
+        {{ isEditing ? "Annuler la Modification" : "Modifier" }}
+      </button>
+      <button mat-button type="button" class="cancel-button" mat-dialog-close>
+        Fermer
+      </button>
+      <button
+        mat-raised-button
+        type="submit"
+        class="submit-button"
+        [disabled]="editForm.invalid || !isEditing"
+        color="primary"
+      >
+        Enregistrer les Modifications
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,237 @@
+<div class="history-container">
+  <div class="history-header">
+    <h1>Historique des tickets</h1>
+    <p>Consultez l'historique de vos tickets résolus et non résolus</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>assignment_turned_in</mat-icon>
+        </div>
+        <div class="stat-details">
+          <h3>Total terminés</h3>
+          <p class="stat-value">{{ totalTickets }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-details">
+          <h3>Résolus</h3>
+          <p class="stat-value">{{ resolvedTickets }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>cancel</mat-icon>
+        </div>
+        <div class="stat-details">
+          <h3>Non résolus</h3>
+          <p class="stat-value">{{ unresolvedTickets }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon">
+          <mat-icon>schedule</mat-icon>
+        </div>
+        <div class="stat-details">
+          <h3>Temps moyen</h3>
+          <p class="stat-value">{{ averageDuration }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Search and Filter Section -->
+  <div class="filters-section">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input 
+        type="text" 
+        placeholder="Rechercher un ticket..." 
+        [(ngModel)]="searchTerm"
+        (input)="applyFilter()"
+      >
+      <button 
+        *ngIf="searchTerm" 
+        class="clear-button" 
+        (click)="clearSearch()"
+        matTooltip="Effacer la recherche"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="filter-buttons">
+      <button 
+        class="filter-button" 
+        [class.active]="statusFilter === 'all'" 
+        (click)="setStatusFilter('all')"
+      >
+        <mat-icon>list</mat-icon>
+        Tous les tickets
+      </button>
+      
+      <button 
+        class="filter-button" 
+        [class.active]="statusFilter === 'resolved'" 
+        (click)="setStatusFilter('resolved')"
+      >
+        <mat-icon>check_circle</mat-icon>
+        Résolus
+      </button>
+      
+      <button 
+        class="filter-button" 
+        [class.active]="statusFilter === 'unresolved'" 
+        (click)="setStatusFilter('unresolved')"
+      >
+        <mat-icon>cancel</mat-icon>
+        Non résolus
+      </button>
+    </div>
+  </div>
+
+  <!-- Tickets Table -->
+  <div class="tickets-table-container">
+    <div class="table-header">
+      <h2>Tickets terminés</h2>
+      <button 
+        class="refresh-button" 
+        matTooltip="Actualiser les tickets"
+        (click)="refreshTickets()"
+      >
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div *ngIf="isLoading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Chargement des tickets...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && (!dataSource || dataSource.filteredData.length === 0)" class="empty-state">
+      <mat-icon>history</mat-icon>
+      <p>Aucun ticket trouvé pour les critères sélectionnés.</p>
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!isLoading && dataSource && dataSource.filteredData.length > 0" class="table-wrapper">
+      <table mat-table [dataSource]="dataSource" matSort class="tickets-table">
+        <!-- ID Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
+          <td mat-cell *matCellDef="let ticket">#{{ ticket.id }}</td>
+        </ng-container>
+
+        <!-- Title Column -->
+        <ng-container matColumnDef="title">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Titre</th>
+          <td mat-cell *matCellDef="let ticket">{{ ticket.title }}</td>
+        </ng-container>
+
+        <!-- Project Column -->
+        <ng-container matColumnDef="project">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Projet</th>
+          <td mat-cell *matCellDef="let ticket">
+            <span class="project-badge">{{ ticket.project?.name || 'Non spécifié' }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Priority Column -->
+        <ng-container matColumnDef="priority">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Priorité</th>
+          <td mat-cell *matCellDef="let ticket">
+            <span class="badge priority-{{ getPriorityClass(ticket.priority) }}">
+              {{ ticket.priority || 'Non défini' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+          <td mat-cell *matCellDef="let ticket">
+            <span class="badge status-{{ getStatusClass(ticket.status) }}">
+              <mat-icon *ngIf="isResolved(ticket.status)" class="status-icon">check_circle</mat-icon>
+              <mat-icon *ngIf="isNotResolved(ticket.status)" class="status-icon">cancel</mat-icon>
+              {{ getNormalizedStatus(ticket.status) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Created At Column -->
+        <ng-container matColumnDef="createdAt">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Créé le</th>
+          <td mat-cell *matCellDef="let ticket">
+            {{ ticket.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+          </td>
+        </ng-container>
+
+        <!-- Completed At Column -->
+        <ng-container matColumnDef="completedAt">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Terminé le</th>
+          <td mat-cell *matCellDef="let ticket">
+            {{ ticket.finishWorkTime | date: 'dd/MM/yyyy HH:mm' }}
+          </td>
+        </ng-container>
+
+        <!-- Duration Column -->
+        <ng-container matColumnDef="duration">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Durée</th>
+          <td mat-cell *matCellDef="let ticket">
+            <span class="duration-badge">
+              {{ getWorkDuration(ticket) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let ticket">
+            <button 
+              mat-icon-button 
+              color="primary" 
+              matTooltip="Voir les détails"
+              (click)="openTicketDetails(ticket); $event.stopPropagation()"
+            >
+              <mat-icon>visibility</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr 
+          mat-row 
+          *matRowDef="let row; columns: displayedColumns;"
+          (click)="openTicketDetails(row)"
+          class="ticket-row"
+        ></tr>
+      </table>
+
+      <!-- Paginator -->
+      <mat-paginator 
+        [pageSize]="pageSize"
+        hidePageSize="true"
+        showFirstLastButtons
+        aria-label="Sélectionner une page de tickets">
+      </mat-paginator>
+    </div>
+  </div>
+</div> 

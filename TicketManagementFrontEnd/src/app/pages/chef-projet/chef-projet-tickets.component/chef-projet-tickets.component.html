@@ -1,0 +1,166 @@
+<!-- chef-projet-tickets.component.html -->
+<div class="chef-projet-tickets-container">
+  <div class="particle-background"></div>
+  <div class="animated-gradient"></div>
+
+  <!-- Main Content Area -->
+  <main class="chef-projet-main-content">
+    <div class="tickets-container">
+      <div class="header">
+        <div class="title-section">
+          <h1 class="tickets-title">Mes Tickets</h1>
+          <div class="total-count">{{ (filteredTickets?.length || 0) }} ticket<span *ngIf="(filteredTickets?.length || 0) !== 1">s</span></div>
+        </div>
+        
+        <div class="header-actions">
+          <div class="search-sort-container">
+            <div class="search-container">
+              <span class="search-icon">
+                <mat-icon>search</mat-icon>
+              </span>
+              <input 
+                type="text" 
+                class="search-input" 
+                placeholder="Rechercher un ticket..." 
+                [(ngModel)]="searchTerm" 
+                (input)="applySearch()"
+              />
+              <button *ngIf="searchTerm" class="clear-search-btn" (click)="clearSearch()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <div class="sort-container">
+              <label for="sort-select">Trier par :</label>
+              <select id="sort-select" [ngModel]="sortCriteria" (change)="applySort($event)">
+                <option value="newest">Plus récents en premier</option>
+                <option value="oldest">Plus anciens en premier</option>
+                <option value="status">Statut</option>
+                <option value="title">Titre</option>
+                <option value="priority">Priorité</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Export button -->
+          <button *ngIf="(tickets?.length || 0) > 0" 
+                  mat-raised-button 
+                  color="primary" 
+                  class="export-button" 
+                  (click)="openExportDialog()">
+            <mat-icon>file_download</mat-icon>
+            Exporter en Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Content Card -->
+      <div class="content-card">
+        <!-- Loading state - Always show when loading is true -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="ripple-loader">
+            <div></div>
+            <div></div>
+          </div>
+          <p>Chargement des tickets...</p>
+        </div>
+
+        <!-- Error state -->
+        <div *ngIf="!loading && error" class="error-container">
+          <div class="error-icon">
+            <mat-icon>error_outline</mat-icon>
+          </div>
+          <h2>Erreur</h2>
+          <p>{{ error }}</p>
+          <button mat-raised-button color="primary" (click)="loadTickets()">Réessayer</button>
+        </div>
+
+        <!-- Empty state - Show when not loading, no error, and no tickets -->
+        <div *ngIf="!loading && !error && (filteredTickets?.length || 0) === 0" class="empty-container">
+          <div class="empty-icon">
+            <mat-icon>assignment_late</mat-icon>
+          </div>
+          <h2>Aucun ticket trouvé</h2>
+          <p>Aucun ticket ne correspond à vos critères de recherche ou vous n'avez pas encore de tickets assignés à vos projets.</p>
+          <button mat-raised-button color="primary" (click)="loadTickets()">Actualiser</button>
+        </div>
+
+        <!-- Tickets table - Only show when not loading, no error, and have tickets -->
+        <div *ngIf="!loading && !error && (filteredTickets?.length || 0) > 0" class="tickets-table-container">
+          <div class="tickets-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Titre</th>
+                  <th>Description</th>
+                  <th>Projet</th>
+                  <th>Statut</th>
+                  <th>Priorité</th>
+                  <th>Actions</th>
+                  <th>Détails</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ticket of filteredTickets || []; let i = index" class="ticket-row" [attr.data-index]="i">
+                  <td class="title-cell">{{ ticket?.title || 'Sans titre' }}</td>
+                  <td class="description-cell">{{ ticket?.description || 'Aucune description' }}</td>
+                  <td class="project-cell">{{ ticket?.project?.name || "Non spécifié" }}</td>
+                  <td class="status-cell">
+                    <span class="status-badge"
+                      [ngClass]="{
+                        'status-open': ['open', 'ouvert', 'unresolved', 'non résolu'].includes((ticket?.status || '').toLowerCase()),
+                        'status-accepted': ['accepté', 'accepted', 'accepte'].includes((ticket?.status || '').toLowerCase()),
+                        'status-assigned': ['assigné', 'assigned', 'assigne'].includes((ticket?.status || '').toLowerCase()),
+                        'status-refused': ['refusé', 'refused', 'refuse'].includes((ticket?.status || '').toLowerCase()),
+                        'status-resolved': ['résolu', 'resolved', 'resolvedresolu'].includes((ticket?.status || '').toLowerCase())
+                      }">
+                      {{ ticket?.status || 'Inconnu' }}
+                    </span>
+                  </td>
+                  <td class="priority-cell">{{ ticket?.priority || 'Standard' }}</td>
+                  <td class="actions-cell">
+                    <!-- Initial state: Open - show Accept/Refuse buttons -->
+                    <div *ngIf="['open', 'ouvert', 'unresolved', 'non résolu'].includes((ticket?.status || '').toLowerCase())" class="action-buttons">
+                      <button mat-raised-button color="primary" (click)="acceptTicket(ticket.id)">
+                        <mat-icon>check</mat-icon>
+                        <span>Accepter</span>
+                      </button>
+                      <button mat-raised-button color="warn" (click)="openRefuseDialog(ticket)">
+                        <mat-icon>close</mat-icon>
+                        <span>Refuser</span>
+                      </button>
+                    </div>
+
+                    <!-- Second state: Accepted - show Assign button -->
+                    <div *ngIf="canAssignTicket(ticket)" class="action-buttons">
+                      <button mat-raised-button color="primary" (click)="openAssignDialog(ticket)">
+                        <mat-icon>person_add</mat-icon>
+                        <span>Assigner</span>
+                      </button>
+                    </div>
+
+                    <!-- Read-only states: show assigned user if available -->
+                    <div *ngIf="['assigné', 'assigned', 'assigne'].includes((ticket?.status || '').toLowerCase()) && ticket?.assignedTo" class="assigned-user">
+                      <mat-icon>person</mat-icon>
+                      <span>{{ getAssignedToName(ticket) }}</span>
+                    </div>
+                  </td>
+                  <td class="details-cell">
+                    <a [routerLink]="['/chef-projet/tickets', ticket?.id || 0]" class="details-btn">
+                      <div class="details-btn-content">
+                        <span class="details-icon">
+                          <mat-icon>visibility</mat-icon>
+                        </span>
+                        <span class="details-text">Détails</span>
+                      </div>
+                      <div class="details-btn-hover-effect"></div>
+                    </a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

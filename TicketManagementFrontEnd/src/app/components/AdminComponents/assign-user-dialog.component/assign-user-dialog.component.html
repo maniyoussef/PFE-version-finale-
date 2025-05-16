@@ -1,0 +1,57 @@
+<h2 mat-dialog-title>Assigner un Ticket</h2>
+<mat-dialog-content>
+  <p>
+    Ticket: <strong>{{ data.ticket.title }}</strong>
+  </p>
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Chargement des collaborateurs...</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error && !isLoading" class="error-message">
+    <p>{{ error }}</p>
+    <p>Veuillez réessayer ou contacter l'administrateur système.</p>
+  </div>
+
+  <!-- Standard Select dropdown for users instead of mat-select -->
+  <div *ngIf="!isLoading && !error && filteredUsers.length > 0" class="form-group full-width">
+    <label for="userSelect">Sélectionner un collaborateur</label>
+    <select 
+      id="userSelect" 
+      class="form-control"
+      [(ngModel)]="selectedUser">
+      <option [ngValue]="null">-- Sélectionner un collaborateur --</option>
+      <option *ngFor="let user of filteredUsers" [ngValue]="user">
+        {{ user.name }} {{ user.lastName }}
+        <span *ngIf="user.role?.name?.toLowerCase() !== 'collaborateur'">({{ user.role?.name || 'Role inconnu' }})</span>
+      </option>
+    </select>
+  </div>
+  
+  <!-- Empty state -->
+  <div *ngIf="!isLoading && !error && filteredUsers.length === 0" class="empty-state">
+    <p>Aucun collaborateur disponible. Veuillez contacter l'administrateur.</p>
+  </div>
+  
+  <!-- Debug info to help troubleshoot -->
+  <div class="debug-info" style="margin-top: 16px; font-size: 12px; color: #777;">
+    <p>Total utilisateurs chargés: {{ users.length }}</p>
+    <p>Collaborateurs filtrés: {{ filteredUsers.length }}</p>
+    <p *ngIf="chefProjetId">Chef Projet ID: {{ chefProjetId }}</p>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close (click)="onCancel()">Annuler</button>
+  <button
+    mat-raised-button
+    color="primary"
+    [disabled]="!selectedUser || isLoading"
+    (click)="onSave()"
+  >
+    Assigner
+  </button>
+</mat-dialog-actions>

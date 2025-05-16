@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+before creating any new file , check if it exists , if yes , just update  it  and always think twice before making any move 

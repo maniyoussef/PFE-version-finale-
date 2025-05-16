@@ -1,0 +1,85 @@
+<div class="main-content">
+  <div class="content-wrapper">
+    <h1 class="title">Tableau de Bord Administrateur</h1>
+
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <div class="card-header">
+          <mat-icon>group</mat-icon>
+          <h2>Utilisateurs</h2>
+        </div>
+        <div class="card-action">
+          <button class="action-button" (click)="navigateTo('/admin/users')">
+            Gérer les Utilisateurs
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="card-header">
+          <mat-icon>business</mat-icon>
+          <h2>Sociétés</h2>
+        </div>
+        <div class="card-action">
+          <button class="action-button" (click)="navigateTo('/admin/societes')">
+            Gérer les Sociétés
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="card-header">
+          <mat-icon>folder</mat-icon>
+          <h2>Projets</h2>
+        </div>
+        <div class="card-action">
+          <button class="action-button" (click)="navigateTo('/admin/projects')">
+            Gérer les Projets
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="card-header">
+          <mat-icon>confirmation_number</mat-icon>
+          <h2>Tickets</h2>
+        </div>
+        <div class="card-action">
+          <button class="action-button" (click)="navigateTo('/admin/tickets')">
+            Gérer les Tickets
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="card-header">
+          <mat-icon>assignment_ind</mat-icon>
+          <h2>Assignations</h2>
+        </div>
+        <div class="card-action">
+          <button
+            class="action-button"
+            (click)="navigateTo('/admin/assignement')"
+          >
+            Gérer les Assignations
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="card-header">
+          <mat-icon>bug_report</mat-icon>
+          <h2>Débogage</h2>
+        </div>
+        <div class="card-action">
+          <button
+            class="action-button debug-button"
+            (click)="navigateTo('/admin/debug')"
+          >
+            Debugger les Assignations
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

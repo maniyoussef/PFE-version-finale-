@@ -1,0 +1,96 @@
+<div class="roles-container">
+  <div class="particle-background"></div>
+
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Gestion des Rôles</h1>
+      <div class="header-actions">
+        <div class="search-sort-container">
+          <div class="sort-container">
+            <button class="sort-button" (click)="toggleSort()">
+              <mat-icon>{{ sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+              Trier par nom
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No roles state -->
+    <div *ngIf="!isLoading && roles.length === 0" class="empty-state">
+      <mat-icon>group</mat-icon>
+      <p>Aucun rôle trouvé</p>
+    </div>
+
+    <!-- Roles Table -->
+    <div *ngIf="!isLoading && roles.length > 0" class="role-list-container" [@fadeInList]>
+      <table class="role-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nom du Rôle</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let role of roles" 
+              [class.row-highlighted]="activeRow === role.id"
+              (mouseenter)="setActiveRow(role.id)"
+              (mouseleave)="setActiveRow(null)">
+            <td>{{ role.id }}</td>
+            <td>
+              <ng-container *ngIf="editingRole?.id !== role.id; else editForm">
+                {{ role.name }}
+              </ng-container>
+              <ng-template #editForm>
+                <mat-form-field appearance="outline" class="edit-form-field">
+                  <input matInput [(ngModel)]="editingRole!.name" (keyup.enter)="saveEdit()" />
+                </mat-form-field>
+              </ng-template>
+            </td>
+            <td class="actions-cell">
+              <div class="menu-container">
+                <button mat-icon-button [matMenuTriggerFor]="actionMenu" class="menu-trigger">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #actionMenu="matMenu" class="action-menu">
+                  <button mat-menu-item *ngIf="editingRole?.id !== role.id" (click)="startEdit(role)">
+                    <mat-icon>edit</mat-icon>
+                    <span>Modifier</span>
+                  </button>
+                  <button mat-menu-item *ngIf="editingRole?.id === role.id" (click)="saveEdit()">
+                    <mat-icon>save</mat-icon>
+                    <span>Enregistrer</span>
+                  </button>
+                  <button mat-menu-item *ngIf="editingRole?.id === role.id" (click)="cancelEdit()">
+                    <mat-icon>close</mat-icon>
+                    <span>Annuler</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Add Role Form -->
+    <div class="add-role-form" [@fadeIn]>
+      <mat-form-field appearance="outline">
+        <mat-label>Nom du rôle</mat-label>
+        <input matInput [(ngModel)]="newRoleName" placeholder="Entrez le nom du rôle" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" (click)="addNewRole()">
+        <mat-icon>add</mat-icon>
+        Ajouter un rôle
+      </button>
+    </div>
+  </div>
+</div>

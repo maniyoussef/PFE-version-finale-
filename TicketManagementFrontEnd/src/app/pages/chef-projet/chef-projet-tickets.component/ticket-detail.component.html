@@ -1,0 +1,123 @@
+<!-- ticket-detail.component.html -->
+<div class="ticket-detail-container">
+  <div class="animated-gradient"></div>
+  <div class="particle-background"></div>
+  
+  <div class="back-navigation">
+    <button mat-button class="back-button" routerLink="/chef-projet/tickets">
+      <mat-icon>arrow_back</mat-icon>
+      <span>Retour aux tickets</span>
+    </button>
+  </div>
+
+  <div *ngIf="ticket; else loadingOrError" class="ticket-detail-card">
+    <div class="ticket-header">
+      <div class="ticket-title-section">
+        <h1 class="ticket-title">{{ ticket.title }}</h1>
+        <div class="ticket-badges">
+          <span class="status-badge" [ngClass]="'status-' + (ticket?.status?.toLowerCase() || '')">{{ ticket?.status }}</span>
+          <span class="priority-badge" [ngClass]="'priority-' + (ticket?.priority?.toLowerCase() || '')">{{ ticket?.priority }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket-content">
+      <div class="ticket-info-section">
+        <div class="ticket-section">
+          <h3 class="section-title">Détails</h3>
+          
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">
+                <mat-icon>assignment</mat-icon>
+                <span>Projet</span>
+              </div>
+              <div class="info-value">{{ ticket.project?.name || 'Non assigné' }}</div>
+            </div>
+            
+            <div class="info-item">
+              <div class="info-label">
+                <mat-icon>person</mat-icon>
+                <span>Assigné à</span>
+              </div>
+              <div class="info-value">
+                <span *ngIf="ticket.assignedTo?.name">{{ ticket.assignedTo?.name }}</span>
+                <span *ngIf="!ticket.assignedTo?.name" class="not-assigned">Non assigné</span>
+              </div>
+            </div>
+            
+            <div class="info-item">
+              <div class="info-label">
+                <mat-icon>calendar_today</mat-icon>
+                <span>Créé le</span>
+              </div>
+              <div class="info-value">{{ ticket.createdAt | date:'dd MMM yyyy, HH:mm' }}</div>
+            </div>
+            
+            <!-- Add work duration display -->
+            <div class="info-item">
+              <div class="info-label">
+                <mat-icon>timelapse</mat-icon>
+                <span>Durée de travail</span>
+              </div>
+              <div class="info-value">
+                <span *ngIf="ticket.workDuration">{{ formatWorkDuration(ticket.workDuration) }}</span>
+                <span *ngIf="!ticket.workDuration" class="not-tracked">Non suivi</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons Section -->
+          <div class="ticket-actions">
+            <!-- Show assign button when ticket status is Accepté/accepted -->
+            <button *ngIf="ticket.status?.toLowerCase() === 'accepté' || ticket.status?.toLowerCase() === 'accepted'"
+              mat-raised-button color="primary" class="assign-button" (click)="openAssignDialog()">
+              <mat-icon>person_add</mat-icon>
+              <span>Assigner à un collaborateur</span>
+            </button>
+            
+            <!-- Always show comment button -->
+            <button mat-raised-button color="accent" class="comment-button" (click)="openCommentDialog()">
+              <mat-icon>comment</mat-icon>
+              <span>Commenter</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="ticket-section">
+          <h3 class="section-title">Description</h3>
+          <div class="description-content">
+            {{ ticket.description || 'Aucune description disponible' }}
+          </div>
+        </div>
+        
+        <div *ngIf="ticket.commentaire" class="ticket-section">
+          <h3 class="section-title">Commentaire</h3>
+          <div class="description-content">
+            {{ ticket.commentaire }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #loadingOrError>
+    <div class="content-card">
+      <div *ngIf="loading" class="loading-container">
+        <div class="ripple-loader">
+          <div></div>
+          <div></div>
+        </div>
+        <p>Chargement des détails du ticket...</p>
+      </div>
+      
+      <div *ngIf="error && !loading" class="error-container">
+        <div class="error-icon">
+          <mat-icon>error_outline</mat-icon>
+        </div>
+        <h2>Une erreur est survenue</h2>
+        <p>{{ error }}</p>
+      </div>
+    </div>
+  </ng-template>
+</div>

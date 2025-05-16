@@ -1,0 +1,370 @@
+\newpage
+\section{CHAPITRE 2 - ÉTUDE PRÉLIMAIRE}
+\label{chap:etude-preliminaire}
+
+\subsection{Introduction}
+\label{sec:introduction}
+Ce chapitre présente l'étude préliminaire du système de gestion de tickets SimSoft. Il commence par l'identification des besoins fonctionnels et non fonctionnels, puis détaille les acteurs, le backlog produit, la planification des sprints, l'architecture technique et logique, ainsi que l'environnement de développement.
+
+% Commentaire : Remplacez par le chemin correct de l'image ou supprimez si non disponible
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{images/processus_ticket.png}
+%     \caption{Illustration du processus de gestion de tickets}
+%     \label{fig:processus-gestion-tickets}
+% \end{figure}
+
+\subsection{Analyse et identification des besoins}
+\subsubsection{Identification des acteurs}
+\label{sec:identification-des-acteurs}
+La plateforme SimSoft Ticket Management implique plusieurs acteurs, chacun ayant des responsabilités et des droits spécifiques.
+
+La hiérarchie et les interactions sont décrites dans la documentation et reflétées dans le code (contrôleurs, pages Angular, modèles) :
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[htbp]
+    \centering
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{|p{2cm}|p{12cm}|}
+        \hline
+        \textbf{Acteur} & \textbf{Rôle} \\
+        \hline
+        Admin & Gère l'ensemble du système, les utilisateurs, les projets, les sociétés clientes, les catégories de problèmes. Supervise l'activité globale, accède à tous les rapports et statistiques, configure les paramètres globaux, assigne les chefs de projet et collaborateurs, gère les droits d'accès. \\
+        \hline
+        Chef Projet & Supervise les projets qui lui sont assignés, gère les tickets de ses projets, assigne les tickets aux collaborateurs, suit la charge de travail et la performance de son équipe, génère des rapports d'activité, communique avec les clients et collaborateurs. \\
+        \hline
+        Collaborateur & Prend en charge les tickets qui lui sont assignés, met à jour leur statut, rédige des rapports de résolution, ajoute des commentaires et pièces jointes, consulte l'historique de ses interventions, gère son profil. \\
+        \hline
+        Client/User & Crée des tickets pour signaler des incidents ou demandes, suit l'avancement de ses tickets, consulte l'historique de ses demandes, ajoute des pièces jointes, communique avec l'équipe support. (Dans la documentation, "User" et "Client" sont identiques.) \\
+        \hline
+    \end{tabular}
+    \caption{Tableau des acteurs et de leurs rôles}
+    \label{tab:tableau-acteurs}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+\vspace{5mm} % Increase vertical space
+% Commentaire : Remplacez par le chemin correct de l'image ou supprimez si non disponible
+% \begin{figure}[htbp] % Changed from [H] to [htbp] for more flexibility
+%     \centering
+%     \includegraphics[width=0.3\textwidth]{images/conceptionsecond.png}
+%     \caption{Diagramme des acteurs et de leurs interactions}
+%     \label{fig:diagramme-acteurs}
+% \end{figure}
+
+\textbf{Détail sur la hiérarchie et l'assignation} :
+\begin{itemize}
+    \item L'Admin possède les droits d'assignation les plus étendus (projets, chefs de projet, collaborateurs, clients).
+    \item Le Chef Projet peut gérer les assignations pour son équipe et ses projets.
+    \item Le Collaborateur reçoit des assignations mais n'en effectue pas.
+    \item Le Client/User est externe à la hiérarchie d'assignation, il ne peut créer que des tickets liés à ses projets.
+\end{itemize}
+
+\textbf{Exemple de scénario d'interaction} :
+\begin{quote}
+    Un client crée un ticket pour un projet donné. L'admin ou le chef de projet reçoit une notification, évalue le ticket, puis l'assigne à un collaborateur compétent. Le collaborateur traite le ticket, échange avec le client via les commentaires, et clôture le ticket une fois résolu.
+\end{quote}
+
+\subsubsection{Identification des besoins fonctionnels}
+\label{sec:identification-des-besoins-fonctionnels}
+Les besoins fonctionnels sont explicitement listés dans la documentation et reflétés dans le code (contrôleurs, services, pages Angular) :
+
+\paragraph{Besoins fonctionnels du Client/User}
+\label{sec:besoins-fonctionnels-client}
+\begin{itemize}
+    \item Créer un ticket d'incident ou de demande d'assistance, en sélectionnant le projet et la catégorie de problème.
+    \item Ajouter une description détaillée, des pièces jointes (documents, images, etc.).
+    \item Suivre l'état d'avancement de ses tickets (en attente, accepté, en cours, temporairement arrêté, résolu, rejeté, réouvert, non résolu).
+    \item Consulter l'historique de ses tickets et les rapports de résolution.
+    \item Ajouter des commentaires à ses tickets pour dialoguer avec l'équipe support.
+    \item Modifier ses informations personnelles (profil, mot de passe).
+    \item Recevoir des notifications lors des changements de statut ou de commentaires sur ses tickets.
+\end{itemize}
+
+Exemple d'interface :
+\begin{quote}
+    Capture d'écran de la page "Créer un ticket" côté client, avec formulaire, upload de pièces jointes, et sélection du projet/catégorie.
+\end{quote}
+
+\paragraph{Besoins fonctionnels du Collaborateur}
+\label{sec:besoins-fonctionnels-collaborateur}
+\begin{itemize}
+    \item Visualiser la liste des tickets qui lui sont assignés, filtrer par statut, priorité, projet, etc.
+    \item Mettre à jour le statut d'un ticket (en cours, temporairement arrêté, résolu, non résolu).
+    \item Ajouter des commentaires et des pièces jointes à un ticket.
+    \item Rédiger un rapport de résolution pour chaque ticket traité.
+    \item Consulter l'historique de ses interventions et les métriques de temps de travail.
+    \item Gérer son profil utilisateur.
+    \item Recevoir des notifications lors de l'assignation d'un ticket ou de nouveaux commentaires.
+\end{itemize}
+
+Exemple d'interface :
+\begin{quote}
+    Capture d'écran du dashboard collaborateur, avec liste des tickets assignés, filtres, et accès rapide à la rédaction de rapports.
+\end{quote}
+
+\paragraph{Besoins fonctionnels du Chef de projet}
+\label{sec:besoins-fonctionnels-chef-projet}
+\begin{itemize}
+    \item Visualiser tous les tickets des projets dont il a la charge, avec des filtres avancés.
+    \item Assigner les tickets aux collaborateurs de son équipe, en fonction de la charge et des compétences.
+    \item Suivre la charge de travail et la performance de ses collaborateurs (nombre de tickets traités, temps moyen de résolution, etc.).
+    \item Générer des rapports d'activité et de performance par projet, collaborateur, catégorie de problème.
+    \item Gérer les projets (création, modification, association de collaborateurs et de clients).
+    \item Communiquer avec les clients et les collaborateurs via le système de commentaires.
+    \item Recevoir des notifications sur les nouveaux tickets, changements de statut, etc.
+\end{itemize}
+
+Exemple d'interface :
+\begin{quote}
+    Capture d'écran du dashboard chef de projet, avec vue d'ensemble des tickets, assignation par glisser-déposer, et graphiques de performance.
+\end{quote}
+
+\paragraph{Besoins fonctionnels de l'Administrateur}
+\label{sec:besoins-fonctionnels-administrateur}
+\begin{itemize}
+    \item Gérer l'ensemble des utilisateurs (création, modification, désactivation, attribution des rôles, réinitialisation de mot de passe).
+    \item Gérer les projets, sociétés clientes et catégories de problèmes (création, modification, suppression, assignation).
+    \item Superviser l'activité globale du système (tous les tickets, tous les projets, toutes les sociétés).
+    \item Générer des rapports avancés et des statistiques globales (tickets par statut, temps de résolution, charge par collaborateur, etc.).
+    \item Configurer les paramètres du système (catégories, priorités, sécurité, notifications).
+    \item Gérer les droits d'accès et les permissions (système de gardes/guards).
+    \item Exporter les données (tickets, rapports) au format Excel.
+    \item Gérer les pièces jointes (stockage, sécurité, accès).
+\end{itemize}
+
+\begin{quote}
+    Capture d'écran du dashboard admin, avec accès à la gestion des utilisateurs, projets, sociétés, catégories, et rapports.
+\end{quote}
+
+Détails sur le workflow des tickets :
+\begin{quote}
+    Un ticket passe par les états : En attente → Accepté/Refusé → En cours → Temporairement arrêté/Non résolu/Résolu → Réouvert (si besoin). Les transitions sont contrôlées par les rôles (ex : seul le chef de projet ou l'admin peut accepter/refuser un ticket, seul le collaborateur assigné peut le marquer comme résolu). Les notifications sont envoyées à chaque changement d'état ou de commentaire.
+\end{quote}
+
+\begin{quote}
+    Diagramme de workflow des tickets (UML Activity Diagram ou State Machine).
+\end{quote}
+
+\subsubsection{Identification des besoins non fonctionnels}
+\label{sec:identification-des-besoins-non-fonctionnels}
+Les besoins non fonctionnels sont détaillés dans la documentation et pris en compte dans l'architecture :
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[htbp]
+    \centering
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{|p{2.5cm}|p{12cm}|}
+        \hline
+        \textbf{Exigence} & \textbf{Détails} \\
+        \hline
+        Performance & 
+        \begin{itemize}
+            \item Temps de réponse < 2 secondes pour les opérations courantes.
+            \item Support d'au moins 100 utilisateurs simultanés.
+            \item Capacité de stockage adaptée au volume de tickets et pièces jointes.
+        \end{itemize} \\
+        \hline
+        Disponibilité & Plateforme accessible 24h/24, 7j/7. \\
+        \hline
+        Extensibilité & Architecture modulaire permettant l'ajout de nouvelles fonctionnalités (ex : gestion IA, nouveaux rôles, etc.). \\
+        \hline
+        Sécurité & 
+        \begin{itemize}
+            \item Authentification JWT
+            \item Gestion fine des droits d'accès
+            \item Chiffrement des données sensibles
+            \item Protection contre CSRF/XSS
+        \end{itemize} \\
+        \hline
+        Facilité d'utilisation & 
+        \begin{itemize}
+            \item Interface moderne
+            \item Responsive design
+            \item Messages d'erreur explicites
+            \item Navigation fluide
+        \end{itemize} \\
+        \hline
+        Traçabilité & 
+        \begin{itemize}
+            \item Historique complet des actions
+            \item Journalisation des modifications
+            \item Suivi des accès et des opérations critiques
+        \end{itemize} \\
+        \hline
+        Interopérabilité & Intégration possible avec d'autres systèmes (ERP, CRM, API externes). \\
+        \hline
+        Maintenance & 
+        \begin{itemize}
+            \item Outils d'administration
+            \item Logs détaillés
+            \item Documentation technique et utilisateur à jour
+        \end{itemize} \\
+        \hline
+    \end{tabular}
+    \caption{Tableau des besoins non fonctionnels}
+    \label{tab:besoins-non-fonctionnels}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+\subsection{Backlog de produit}
+\label{sec:backlog-de-produit}
+Le backlog produit est constitué d'user stories, issues de la documentation et du code (DTOs, contrôleurs, pages Angular) :
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[htbp]
+    \centering
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{|p{2.5cm}|p{2cm}|p{8cm}|p{1.5cm}|}
+        \hline
+        \textbf{Fonctionnalité} & \textbf{Acteur} & \textbf{User Story} & \textbf{Priorité} \\
+        \hline
+        S'inscrire & Client/User & En tant que client, je veux créer un compte pour accéder à la plateforme. & Élevée \\
+        \hline
+        S'authentifier & Tous & En tant qu'utilisateur, je veux m'authentifier pour accéder à mon espace. & Élevée \\
+        \hline
+        Créer un ticket & Client/User & En tant que client, je veux créer un ticket pour signaler un incident. & Élevée \\
+        \hline
+        Assigner un ticket & Chef Projet & En tant que chef de projet, je veux assigner un ticket à un collaborateur. & Élevée \\
+        \hline
+        Traiter un ticket & Collaborateur & En tant que collaborateur, je veux mettre à jour le statut d'un ticket. & Élevée \\
+        \hline
+        Générer un rapport & Admin & En tant qu'admin, je veux générer des rapports sur l'activité du système. & Moyenne \\
+        \hline
+        Gérer les projets & Admin/Chef & En tant qu'admin/chef, je veux créer et modifier des projets. & Moyenne \\
+        \hline
+        Ajouter une pièce jointe & Tous & En tant qu'utilisateur, je veux ajouter des fichiers à un ticket. & Moyenne \\
+        \hline
+        Modifier le profil & Tous & En tant qu'utilisateur, je veux modifier mes informations personnelles. & Moyenne \\
+        \hline
+    \end{tabular}
+    \caption{Backlog de produit}
+    \label{tab:backlog-produit}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+\begin{quote}
+    Extrait du backlog produit (tableau ou capture d'écran de l'outil de gestion Agile).
+\end{quote}
+
+\subsection{Planification des sprints}
+\label{sec:planification-des-sprints}
+La documentation ne donne pas de planning détaillé, mais le découpage logique est :
+
+\begin{itemize}
+    \item \textbf{Sprint 1} : Authentification, gestion des utilisateurs, création et suivi des tickets.
+    \item \textbf{Sprint 2} : Gestion des projets, assignation des tickets, tableaux de bord par rôle, reporting.
+    \item \textbf{Sprint 3} : Optimisation, sécurité avancée, intégration, documentation et tests.
+\end{itemize}
+
+Chaque sprint comprend :
+\begin{itemize}
+    \item Analyse des user stories prioritaires
+    \item Développement incrémental
+    \item Tests unitaires et d'intégration
+    \item Démonstration et validation avec les parties prenantes
+    \item Rétrospective pour améliorer le processus
+\end{itemize}
+
+\begin{quote}
+    Planning des sprints (diagramme de Gantt ou tableau de planification Agile).
+\end{quote}
+
+\subsection{Architecture et Technologie}
+\label{sec:architecture-et-technologie}
+
+\subsubsection{Architecture physique du projet}
+\label{sec:architecture-physique}
+\begin{itemize}
+    \item \textbf{Serveur Web} : Héberge le backend ASP.NET Core et l'API REST.
+    \item \textbf{Serveur de base de données} : MySQL, dédié au stockage des données.
+    \item \textbf{Serveur de fichiers} : Stockage sécurisé des pièces jointes.
+    \item \textbf{Clients} : Navigateurs web accédant à l'application Angular.
+\end{itemize}
+
+\begin{quote}
+    Diagramme de déploiement UML (architecture physique du système).
+\end{quote}
+
+\subsubsection{Architecture logique du projet}
+\label{sec:architecture-logique}
+\begin{itemize}
+    \item \textbf{Backend} : Architecture MVC (Modèle-Vue-Contrôleur) :
+    \begin{itemize}
+        \item \textbf{Modèle} : Entités (User, Ticket, Project, Company, etc.), logique métier, accès base de données (Entity Framework Core).
+        \item \textbf{Vue} : Non applicable côté API, mais le frontend Angular joue ce rôle.
+        \item \textbf{Contrôleur} : Contrôleurs RESTful (UsersController, TicketsController, ProjectController, etc.).
+    \end{itemize}
+    \item \textbf{Frontend} : Architecture modulaire Angular :
+    \begin{itemize}
+        \item Modules par rôle (admin, chef projet, collaborateur, client).
+        \item Services pour la communication avec l'API.
+        \item Composants réutilisables (tableaux, formulaires, dashboards).
+    \end{itemize}
+\end{itemize}
+
+\begin{quote}
+    Schéma de l'architecture logique MVC et modulaire Angular.
+\end{quote}
+
+\subsubsection{Environnement de développement}
+\label{sec:environnement-de-developpement}
+
+\paragraph{Outils de développement}
+\label{sec:outils-de-developpement}
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[htbp]
+    \centering
+    \setlength{\tabcolsep}{6pt}
+    \begin{tabular}{|p{4cm}|p{11cm}|}
+        \hline
+        \textbf{Catégorie} & \textbf{Outil/Technologie} \\
+        \hline
+        \multirow{7}{*}{Outils de développement} & Visual Studio Code : Développement Angular et .NET. \\
+        \cline{2-2}
+        & MySQL Workbench : Gestion base de données. \\
+        \cline{2-2}
+        & Postman : Test des API REST. \\
+        \cline{2-2}
+        & Draw.io : Diagrammes UML et schémas d'architecture. \\
+        \cline{2-2}
+        & Git \& GitHub : Gestion du code source. \\
+        \cline{2-2}
+        & Docker : Conteneurisation et déploiement. \\
+        \cline{2-2}
+        & Overleaf : Rédaction du rapport en LaTeX. \\
+        \hline
+        \multirow{7}{*}{Technologies et frameworks} & Angular 15+ : Frontend SPA. \\
+        \cline{2-2}
+        & TypeScript : Langage Angular. \\
+        \cline{2-2}
+        & ASP.NET Core 6+ : Backend API REST. \\
+        \cline{2-2}
+        & Entity Framework Core : ORM pour MySQL. \\
+        \cline{2-2}
+        & MySQL 8+ : Base de données. \\
+        \cline{2-2}
+        & JWT : Authentification sécurisée. \\
+        \cline{2-2}
+        & Angular Material : Composants UI. \\
+        \hline
+    \end{tabular}
+    \caption{Tableau des outils et technologies utilisés}
+    \label{tab:outils-technologies}
+\end{table}
+\renewcommand{\arraystretch}{1}
+
+\begin{quote}
+    Tableau récapitulatif des outils et technologies utilisés (ou logos des technologies).
+\end{quote}
+
+\subsection{Conclusion}
+\label{sec:conclusion}
+Ce chapitre a permis d'identifier les acteurs, les besoins fonctionnels et non fonctionnels, de présenter le backlog produit, la planification des sprints, l'architecture et l'environnement de développement du projet SimSoft Ticket Management.
+
+Le prochain chapitre sera consacré à la phase de développement et à la mise en œuvre des fonctionnalités prioritaires.
+
+\begin{quote}
+    Schéma récapitulatif du chapitre ou roadmap projet.
+\end{quote} 

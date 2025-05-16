@@ -1,0 +1,207 @@
+<div class="tickets-container">
+  <!-- Main content -->
+  <div class="content-wrapper">
+    <div class="header-section">
+      <div class="title-area">
+        <h1>Mes Tickets</h1>
+        <p class="subtitle">Consultez et gérez vos demandes de support</p>
+      </div>
+      
+      <div class="actions-area">
+        <button
+          mat-button
+          class="action-button primary-button"
+          (click)="openCreateTicketDialog()"
+        >
+          <mat-icon>add</mat-icon>
+          <span>Nouveau Ticket</span>
+        </button>
+        <button
+          mat-button
+          class="action-button"
+          (click)="openExportDialog()"
+          [disabled]="isLoading || tickets.length === 0"
+          matTooltip="Exporter vos tickets en Excel"
+        >
+          <mat-icon>file_download</mat-icon>
+          <span>Exporter Excel</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Chargement des tickets...</p>
+    </div>
+
+    <!-- No tickets state -->
+    <div *ngIf="!isLoading && tickets.length === 0" class="empty-state">
+      <mat-icon>inbox</mat-icon>
+      <h2>Aucun ticket trouvé</h2>
+      <button 
+        mat-button 
+        class="action-button primary-button empty-action" 
+        (click)="openCreateTicketDialog()"
+      >
+        <mat-icon>add</mat-icon>
+        <span>Créer votre premier ticket</span>
+      </button>
+    </div>
+
+    <!-- Ticket list -->
+    <div *ngIf="!isLoading && tickets.length > 0" class="tickets-list">
+      <!-- Filter controls -->
+      <div class="filter-controls">
+        <div class="search-box">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Rechercher un ticket..." (input)="filterTickets($event)">
+        </div>
+        
+        <div class="sort-container">
+          <label for="sort-select">Trier par :</label>
+          <select id="sort-select" (change)="applySort($event)">
+            <option value="newest">Plus récents en premier</option>
+            <option value="oldest">Plus anciens en premier</option>
+            <option value="status">Statut</option>
+            <option value="title">Titre</option>
+            <option value="priority">Priorité</option>
+          </select>
+        </div>
+        
+        <div class="view-toggle">
+          <button mat-icon-button [class.active]="viewMode === 'card'" (click)="switchView('card')" matTooltip="Vue carte">
+            <mat-icon>grid_view</mat-icon>
+          </button>
+          <button mat-icon-button [class.active]="viewMode === 'list'" (click)="switchView('list')" matTooltip="Vue liste">
+            <mat-icon>view_list</mat-icon>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Card view -->
+      <div *ngIf="viewMode === 'card'" class="card-view">
+        <div *ngFor="let ticket of filteredTickets" class="ticket-card">
+          <div class="card-header" [style.borderColor]="getStatusColor(ticket.status)">
+            <div class="ticket-title">
+              <h3>{{ ticket.title }}</h3>
+              <mat-chip [style.backgroundColor]="getStatusColor(ticket.status)">
+                {{ ticket.status || "Statut non spécifié" }}
+              </mat-chip>
+            </div>
+            <div class="ticket-meta">
+              <span class="ticket-date">
+                <mat-icon>event</mat-icon> 
+                {{ formatCreatedDate(ticket.createdAt) }}
+              </span>
+              <span class="ticket-project" *ngIf="ticket.project?.name">
+                <mat-icon>folder</mat-icon>
+                {{ ticket.project?.name }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <div class="ticket-details">
+              <div class="detail-item">
+                <span class="label">Qualification:</span>
+                <span class="value">{{ ticket.qualification || "Non spécifié" }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Priorité:</span>
+                <span class="value priority-badge" 
+                      [class.priority-high]="ticket.priority === 'Haute'"
+                      [class.priority-medium]="ticket.priority === 'Moyenne'"
+                      [class.priority-low]="ticket.priority === 'Basse'">
+                  {{ ticket.priority || "Non spécifiée" }}
+                </span>
+              </div>
+              <div class="detail-item">
+                <span class="label">Catégorie:</span>
+                <span class="value">{{ ticket.problemCategory?.name || "Non spécifié" }}</span>
+              </div>
+              <div class="detail-item" *ngIf="ticket.attachment">
+                <span class="label">Fichier:</span>
+                <a class="value attachment-link" [href]="getAttachmentUrl(ticket.attachment)" target="_blank">
+                  <mat-icon>attach_file</mat-icon>
+                  {{ ticket.attachment.split("/").pop() }}
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-actions">
+            <button mat-button (click)="showDescription(ticket)" class="view-details-btn">
+              <mat-icon>description</mat-icon>
+              Description
+            </button>
+            <button mat-button (click)="openCommentDialog(ticket)" class="add-comment-btn">
+              <mat-icon>comment</mat-icon>
+              Commenter
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- List view -->
+      <div *ngIf="viewMode === 'list'" class="list-view">
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Qualification</th>
+              <th>Projet</th>
+              <th>Catégorie</th>
+              <th>Priorité</th>
+              <th>Status</th>
+              <th>Date de création</th>
+              <th>Fichier</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ticket of filteredTickets">
+              <td class="title-cell">{{ ticket.title }}</td>
+              <td>{{ ticket.qualification || "Non spécifié" }}</td>
+              <td>{{ ticket.project?.name || "Non spécifié" }}</td>
+              <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+              <td>
+                <div class="priority-badge" 
+                      [class.priority-high]="ticket.priority === 'Haute'"
+                      [class.priority-medium]="ticket.priority === 'Moyenne'"
+                      [class.priority-low]="ticket.priority === 'Basse'">
+                  {{ ticket.priority || "Non spécifiée" }}
+                </div>
+              </td>
+              <td>
+                <mat-chip [style.backgroundColor]="getStatusColor(ticket.status)">
+                  {{ ticket.status || "Statut non spécifié" }}
+                </mat-chip>
+              </td>
+              <td>{{ formatCreatedDate(ticket.createdAt) }}</td>
+              <td>
+                <a *ngIf="ticket.attachment" [href]="getAttachmentUrl(ticket.attachment)" target="_blank" class="attachment-link">
+                  <mat-icon>attach_file</mat-icon>
+                  {{ ticket.attachment.split("/").pop() }}
+                </a>
+                <span *ngIf="!ticket.attachment" class="no-attachment">Aucun fichier</span>
+              </td>
+              <td class="actions-cell">
+                <div class="action-buttons">
+                  <button class="action-btn description-btn" (click)="showDescription(ticket)" matTooltip="Voir la description">
+                    <mat-icon>description</mat-icon>
+                    <span>Description</span>
+                  </button>
+                  <button class="action-btn comment-btn" (click)="openCommentDialog(ticket)" matTooltip="Ajouter un commentaire">
+                    <mat-icon>comment</mat-icon>
+                    <span>Commenter</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

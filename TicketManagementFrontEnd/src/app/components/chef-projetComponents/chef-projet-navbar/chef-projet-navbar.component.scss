@@ -1,0 +1,450 @@
+/* Root variables for consistent design */
+:root {
+  --primary: #ff7043;
+  --primary-dark: #e64a19;
+  --primary-light: #ffccbc;
+  --secondary: #2c3e50;
+  --secondary-dark: #1a2530;
+  --secondary-light: #b0bec5;
+  --text-dark: #263238;
+  --text-medium: #546e7a;
+  --text-light: #90a4ae;
+  --background: #ffffff;
+  --surface: #f8f9fa;
+  --divider: #eceff1;
+  --success: #4caf50;
+  --warning: #ff9800;
+  --danger: #f44336;
+  --info: #2196f3;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow: 0 3px 6px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --topbar-height: 40px;
+  --navbar-height: 60px;
+}
+
+/* navbar.component.scss */
+.navbar {
+  height: var(--navbar-height);
+  max-height: var(--navbar-height);
+  min-height: var(--navbar-height);
+  background-color: white;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  height: var(--navbar-height);
+  border-right: 1px solid #e9ecef;
+  background-color: white;
+  min-width: 200px;
+}
+
+.logo-image {
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+  object-fit: contain;
+  display: block;
+  background-color: transparent;
+  border: none;
+  content-visibility: auto;
+  image-rendering: auto;
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+
+.text-black {
+  color: #2c3e50;
+}
+
+.text-orange {
+  color: #ff7043;
+}
+
+.nav-links {
+  display: flex;
+  height: 100%;
+  padding-left: 20px;
+}
+
+.nav-link {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  color: #495057;
+  font-size: 14px;
+  text-decoration: none;
+  position: relative;
+  white-space: nowrap;
+  
+  mat-icon {
+    margin-right: 8px;
+    font-size: 20px;
+    color: #495057;
+  }
+  
+  &:hover {
+    color: #ff7043;
+    
+    mat-icon {
+      color: #ff7043;
+    }
+  }
+  
+  &.active {
+    color: #ff7043;
+    font-weight: 500;
+    
+    mat-icon {
+      color: #ff7043;
+    }
+    
+    &:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background-color: #ff7043;
+    }
+  }
+}
+
+/* toolbar icons with clean notification icon */
+.toolbar-icons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding-right: 20px;
+  
+  mat-icon {
+    margin-left: 15px;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 20px;
+    
+    &:hover {
+      color: #ff7043;
+    }
+  }
+  
+  .notification-icon {
+    color: #495057;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    
+    &:hover {
+      color: #ff7043;
+      transform: scale(1.1);
+    }
+  }
+  
+  .account-icon {
+    color: #495057;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    
+    &:hover {
+      color: #ff7043;
+      transform: scale(1.1);
+    }
+  }
+  
+  .logout-icon {
+    color: #dc3545;
+    
+    &:hover {
+      color: #c82333;
+    }
+  }
+}
+
+/* Custom menu styling */
+::ng-deep .custom-menu {
+  min-width: 220px;
+  max-width: 280px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 8px;
+  box-shadow: var(--shadow);
+  
+  .mat-menu-content {
+    padding: 0;
+  }
+  
+  .menu-header {
+    background-color: var(--primary);
+    color: white;
+    padding: 12px 16px;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.2px;
+  }
+  
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    color: var(--text-medium);
+    font-size: 14px;
+    transition: all 0.2s ease;
+    
+    mat-icon {
+      font-size: 18px;
+      height: 18px;
+      width: 18px;
+      color: var(--primary);
+    }
+    
+    &:hover {
+      background-color: var(--surface);
+      color: var(--primary);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    height: 55px;
+    top: 30px; /* Match the smaller topbar */
+  }
+  
+  .logo-section {
+    height: 55px;
+    padding: 0 15px;
+    min-width: 160px;
+  }
+  
+  .logo-image {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+  }
+  
+  .logo-text {
+    font-size: 18px;
+  }
+  
+  .nav-link {
+    height: 55px;
+    padding: 0 10px;
+    font-size: 13px;
+    
+    mat-icon {
+      font-size: 18px;
+      margin-right: 6px;
+    }
+  }
+  
+  .toolbar-icons {
+    padding-right: 15px;
+    
+    mat-icon {
+      margin-left: 12px;
+      font-size: 18px;
+    }
+  }
+}
+
+/* Enhanced badge styling */
+::ng-deep .notification-icon {
+  .mat-badge-content {
+    font-weight: 600;
+    font-size: 10px;
+    height: 16px;
+    min-width: 16px;
+    line-height: 16px;
+    border-radius: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    animation: pulse 1.5s infinite;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Enhanced notification dialog styles - these affect ::ng-deep to style the dialog */
+::ng-deep .mat-dialog-container {
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+::ng-deep .notification-header {
+  background-color: #ff7043;
+  color: white;
+  margin: 0;
+  padding: 16px 24px;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+::ng-deep .notification-badge {
+  background-color: white;
+  color: #ff7043;
+  font-size: 12px;
+  font-weight: 600;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+::ng-deep .mat-dialog-content {
+  padding: 0;
+  max-height: 75vh;
+}
+
+::ng-deep .notification-actions {
+  display: flex;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+  gap: 8px;
+  background-color: #fafafa;
+}
+
+::ng-deep .notification-item {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: #f5f5f5;
+  }
+  
+  &.unread {
+    background-color: #fff5f0;
+    
+    &:hover {
+      background-color: #ffefe5;
+    }
+  }
+}
+
+::ng-deep .notification-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  background-color: #f0f0f0;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  
+  mat-icon {
+    color: #ff7043;
+  }
+}
+
+::ng-deep .notification-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+::ng-deep .notification-message {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+  white-space: normal;
+  line-height: 1.4;
+  
+  .highlight {
+    font-weight: 600;
+    color: #ff7043;
+  }
+}
+
+::ng-deep .notification-time {
+  font-size: 12px;
+  color: #888;
+}
+
+::ng-deep .notification-ticket-id {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+::ng-deep .empty-notifications {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #888;
+  
+  .empty-icon {
+    font-size: 48px;
+    opacity: 0.5;
+    margin-bottom: 16px;
+    
+    &.spinning {
+      animation: spin 1.5s infinite linear;
+    }
+  }
+  
+  .empty-text {
+    font-size: 16px;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+::ng-deep .mat-dialog-actions {
+  margin-bottom: 0;
+  padding: 12px 24px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #fafafa;
+}
+
+::ng-deep .close-button {
+  color: #666;
+  font-weight: 500;
+}
